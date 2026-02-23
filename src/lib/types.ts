@@ -1,5 +1,8 @@
 export type DownloadStatus = "complete" | "partial" | "queued" | "not-downloaded";
 
+export type MangaOrigin = "JP" | "KR";
+export type SearchOrigin = MangaOrigin | "ALL";
+
 export type Manga = {
   id: string;
   title: string;
@@ -13,4 +16,5 @@ export type Manga = {
   };
   sizeOnDisk: string;
   lastUpdated: string;
+  origin: MangaOrigin;
 };
