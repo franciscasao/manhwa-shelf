@@ -1,20 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { JetBrains_Mono } from "next/font/google";
-import { AniListMedia, searchMedia, mapAniListToManga } from "@/lib/anilist";
+import {
+  AniListMedia,
+  PageInfo,
+  searchMedia,
+  mapAniListToManga,
+} from "@/lib/anilist";
 import { SearchOrigin } from "@/lib/types";
 import { useShelf } from "@/hooks/use-shelf";
-import { getDownloadStatus, statusConfig } from "@/lib/manga-utils";
-import { StatusBadge } from "@/components/status-badge";
-import { ProgressDisplay } from "@/components/progress-display";
 import { Plus, Check } from "lucide-react";
-import Link from "next/link";
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
+import { MangaTerminalCard } from "@/components/manga-terminal-card";
+import { TerminalPagination } from "@/components/terminal-pagination";
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
@@ -23,6 +20,8 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const { addToShelf, isOnShelf } = useShelf();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,35 +48,43 @@ export default function SearchPage() {
     }
   }, [isLoading]);
 
+  // Reset to page 1 when query or origin changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, origin]);
+
   useEffect(() => {
     if (query.trim().length < 2) {
       setResults([]);
       setHasSearched(false);
       setError(null);
+      setPageInfo(null);
       return;
     }
 
-    const timer = setTimeout(async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await searchMedia(query.trim(), origin);
-        setResults(data);
-        setHasSearched(true);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Search failed");
-      } finally {
-        setIsLoading(false);
-      }
-    }, 500);
+    const timer = setTimeout(
+      async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const data = await searchMedia(query.trim(), origin, currentPage);
+          setResults(data.media);
+          setPageInfo(data.pageInfo);
+          setHasSearched(true);
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Search failed");
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      currentPage === 1 ? 500 : 0,
+    );
 
     return () => clearTimeout(timer);
-  }, [query, origin]);
+  }, [query, origin, currentPage]);
 
   return (
-    <div
-      className={`${jetbrainsMono.className} relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden`}
-    >
+    <div className="font-mono relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden">
       {/* CRT scanline overlay */}
       <div
         aria-hidden
@@ -286,6 +293,13 @@ export default function SearchPage() {
               <span className="text-terminal-muted mx-2">|</span>
               <span className="text-white">{results.length}</span> records
               returned
+              {pageInfo && (
+                <>
+                  <span className="text-terminal-muted mx-2">|</span>
+                  page{" "}
+                  <span className="text-white">{pageInfo.currentPage}</span>
+                </>
+              )}
               {queryMs !== null && (
                 <>
                   <span className="text-terminal-muted mx-2">|</span>
@@ -302,111 +316,50 @@ export default function SearchPage() {
                   origin === "ALL" ? undefined : origin,
                 );
                 const onShelf = isOnShelf(manga.id);
-                const status = getDownloadStatus(manga);
-                const config = statusConfig[status];
-                const chaptersStr = manga.chapters.total
-                  ? `${manga.chapters.downloaded}/${manga.chapters.total}`
-                  : `${manga.chapters.downloaded}/?`;
 
                 return (
-                  <div
+                  <MangaTerminalCard
                     key={manga.id}
-                    className="shelf-card group relative flex flex-col border border-terminal-border/40 bg-terminal-bg transition-all hover:border-terminal-cyan/40 hover:shadow-[0_0_12px_rgba(0,212,255,0.08)]"
-                    style={{ animationDelay: `${index * 40}ms` }}
-                  >
-                    {/* Left accent strip */}
-                    <div
-                      className={`absolute left-0 top-0 bottom-0 w-[2px] ${
-                        onShelf ? "bg-terminal-green" : `bg-${config.color}`
-                      }`}
-                    />
-
-                    <Link
-                      href={`/manhwa/${media.id}`}
-                      className="flex flex-col flex-1"
-                    >
-                      {/* Cover image */}
-                      <div className="relative aspect-[3/4] w-full overflow-hidden bg-terminal-bg">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={manga.coverImage}
-                          alt={manga.title}
-                          className="h-full w-full object-cover contrast-[1.15] saturate-[0.65] opacity-85 group-hover:opacity-95 transition-opacity"
-                        />
-                        {/* Scanline overlay */}
-                        <div
-                          aria-hidden="true"
-                          className="pointer-events-none absolute inset-0"
-                          style={{
-                            background:
-                              "repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 1px, transparent 1px, transparent 2px)",
-                          }}
-                        />
-                        {/* Rating badge */}
-                        {manga.rating > 0 && (
-                          <div className="absolute top-1 right-1 bg-terminal-bg/80 px-1.5 py-0.5 text-[0.6rem] font-mono text-terminal-orange">
-                            ★ {manga.rating}
-                          </div>
+                    manga={manga}
+                    index={index}
+                    accentColor={onShelf ? "bg-terminal-green" : undefined}
+                    titleClass={onShelf ? "text-terminal-green" : undefined}
+                    showGhost={false}
+                    action={
+                      <button
+                        onClick={() => !onShelf && addToShelf(manga)}
+                        disabled={onShelf}
+                        className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 border-t border-terminal-border/40 bg-terminal-bg/95 py-1.5 text-xs font-mono transition-opacity ${
+                          onShelf
+                            ? "text-terminal-green opacity-100"
+                            : "text-terminal-cyan opacity-0 group-hover:opacity-100 hover:text-terminal-green cursor-pointer"
+                        }`}
+                      >
+                        {onShelf ? (
+                          <>
+                            <Check className="h-3 w-3" />[ ON SHELF ]
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-3 w-3" />[ ADD ]
+                          </>
                         )}
-                      </div>
-
-                      {/* Info area */}
-                      <div className="flex flex-col gap-1 px-2 py-2 text-xs">
-                        <div className="flex items-start gap-1">
-                          <span className="text-terminal-dim shrink-0">
-                            {">"}
-                          </span>
-                          <span
-                            className={`${onShelf ? "text-terminal-green" : config.textClass} line-clamp-1 font-medium leading-tight`}
-                          >
-                            {manga.title}
-                          </span>
-                        </div>
-                        <div className="text-terminal-dim text-[0.6rem] line-clamp-1 pl-3">
-                          {manga.author}
-                        </div>
-
-                        <div className="mt-1">
-                          <ProgressDisplay manga={manga} />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <StatusBadge status={status} />
-                          <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
-                            {chaptersStr} ch
-                          </span>
-                        </div>
-                        <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
-                          {manga.sizeOnDisk}
-                        </div>
-                      </div>
-                    </Link>
-
-                    {/* Add/On Shelf button — visible on hover */}
-                    <button
-                      onClick={() => !onShelf && addToShelf(manga)}
-                      disabled={onShelf}
-                      className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 border-t border-terminal-border/40 bg-terminal-bg/95 py-1.5 text-xs font-mono transition-opacity ${
-                        onShelf
-                          ? "text-terminal-green opacity-100"
-                          : "text-terminal-cyan opacity-0 group-hover:opacity-100 hover:text-terminal-green cursor-pointer"
-                      }`}
-                    >
-                      {onShelf ? (
-                        <>
-                          <Check className="h-3 w-3" />[ ON SHELF ]
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-3 w-3" />[ ADD ]
-                        </>
-                      )}
-                    </button>
-                  </div>
+                      </button>
+                    }
+                  />
                 );
               })}
             </div>
           </div>
+        )}
+
+        {/* SECTION 5.5: Pagination controls */}
+        {!isLoading && !error && results.length > 0 && (
+          <TerminalPagination
+            currentPage={currentPage}
+            hasNextPage={pageInfo?.hasNextPage ?? false}
+            onPageChange={setCurrentPage}
+          />
         )}
 
         {/* SECTION 6: Status bar */}

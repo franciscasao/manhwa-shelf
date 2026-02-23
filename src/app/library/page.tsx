@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { JetBrains_Mono } from "next/font/google";
 import { useShelf } from "@/hooks/use-shelf";
 import { Manga } from "@/lib/types";
 import { getDownloadStatus } from "@/lib/manga-utils";
@@ -18,11 +17,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
 
 type FilterValue = "all" | "complete" | "partial" | "not-downloaded";
 type SortValue = "title" | "rating" | "chapters" | "size" | "updated";
@@ -43,11 +37,17 @@ function sortManga(manga: Manga[], sortBy: SortValue): Manga[] {
     case "rating":
       return sorted.sort((a, b) => b.rating - a.rating);
     case "chapters":
-      return sorted.sort((a, b) => b.chapters.downloaded - a.chapters.downloaded);
+      return sorted.sort(
+        (a, b) => b.chapters.downloaded - a.chapters.downloaded,
+      );
     case "size":
-      return sorted.sort((a, b) => parseSizeGB(b.sizeOnDisk) - parseSizeGB(a.sizeOnDisk));
+      return sorted.sort(
+        (a, b) => parseSizeGB(b.sizeOnDisk) - parseSizeGB(a.sizeOnDisk),
+      );
     case "updated":
-      return sorted.sort((a, b) => (b.lastUpdated || "").localeCompare(a.lastUpdated || ""));
+      return sorted.sort((a, b) =>
+        (b.lastUpdated || "").localeCompare(a.lastUpdated || ""),
+      );
     default:
       return sorted;
   }
@@ -63,12 +63,27 @@ export default function LibraryPage() {
 
   // Compute stats
   const stats = useMemo(() => {
-    const completeCount = shelf.filter((m) => getDownloadStatus(m) === "complete").length;
-    const partialCount = shelf.filter((m) => getDownloadStatus(m) === "partial").length;
-    const noneCount = shelf.filter((m) => getDownloadStatus(m) === "not-downloaded").length;
+    const completeCount = shelf.filter(
+      (m) => getDownloadStatus(m) === "complete",
+    ).length;
+    const partialCount = shelf.filter(
+      (m) => getDownloadStatus(m) === "partial",
+    ).length;
+    const noneCount = shelf.filter(
+      (m) => getDownloadStatus(m) === "not-downloaded",
+    ).length;
     const totalChapters = shelf.reduce((s, m) => s + m.chapters.downloaded, 0);
-    const totalSizeGB = shelf.reduce((s, m) => s + parseSizeGB(m.sizeOnDisk), 0);
-    return { completeCount, partialCount, noneCount, totalChapters, totalSizeGB };
+    const totalSizeGB = shelf.reduce(
+      (s, m) => s + parseSizeGB(m.sizeOnDisk),
+      0,
+    );
+    return {
+      completeCount,
+      partialCount,
+      noneCount,
+      totalChapters,
+      totalSizeGB,
+    };
   }, [shelf]);
 
   // Data pipeline: filter by status → search → sort
@@ -86,7 +101,7 @@ export default function LibraryPage() {
       result = result.filter(
         (m) =>
           m.title.toLowerCase().includes(q) ||
-          m.author.toLowerCase().includes(q)
+          m.author.toLowerCase().includes(q),
       );
     }
 
@@ -101,7 +116,14 @@ export default function LibraryPage() {
     none: stats.noneCount,
   };
 
-  const filterFlag = activeFilter === "all" ? "--all" : activeFilter === "complete" ? "--complete" : activeFilter === "partial" ? "--partial" : "--none";
+  const filterFlag =
+    activeFilter === "all"
+      ? "--all"
+      : activeFilter === "complete"
+        ? "--complete"
+        : activeFilter === "partial"
+          ? "--partial"
+          : "--none";
 
   const confirmTarget = shelf.find((m) => m.id === confirmRemoveId);
 
@@ -117,9 +139,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <div
-      className={`${jetbrainsMono.className} relative min-h-screen overflow-hidden bg-terminal-bg text-terminal-green`}
-    >
+    <div className="font-mono relative min-h-screen overflow-hidden bg-terminal-bg text-terminal-green">
       {/* CRT scanline overlay */}
       <div
         aria-hidden="true"
@@ -166,8 +186,8 @@ export default function LibraryPage() {
 
         {/* Results header line */}
         <div className="mb-3 text-[0.65rem] font-mono text-terminal-dim border-b border-terminal-border pb-2">
-          <span className="text-terminal-green">{">"}</span>{" "}
-          listing <span className="text-white">{filteredManga.length}</span> of{" "}
+          <span className="text-terminal-green">{">"}</span> listing{" "}
+          <span className="text-white">{filteredManga.length}</span> of{" "}
           <span className="text-white">{shelf.length}</span> titles
           <span className="text-terminal-muted mx-2">|</span>
           filter: {filterFlag}
@@ -198,7 +218,9 @@ export default function LibraryPage() {
                     style={{ width: `${30 + (i % 4) * 10}%` }}
                   />
                 </div>
-                <div className="text-[0.6rem] text-terminal-muted shrink-0">loading...</div>
+                <div className="text-[0.6rem] text-terminal-muted shrink-0">
+                  loading...
+                </div>
               </div>
             ))}
           </div>
@@ -252,8 +274,11 @@ export default function LibraryPage() {
                 {">"} CONFIRM REMOVAL
               </DialogTitle>
               <DialogDescription className="text-terminal-dim text-xs">
-                Remove <span className="text-terminal-cyan">{confirmTarget?.title}</span> from
-                your local shelf archive? This action cannot be undone.
+                Remove{" "}
+                <span className="text-terminal-cyan">
+                  {confirmTarget?.title}
+                </span>{" "}
+                from your local shelf archive? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-2">

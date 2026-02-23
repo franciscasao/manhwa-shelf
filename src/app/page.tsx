@@ -1,14 +1,8 @@
 "use client";
 
-import { JetBrains_Mono } from "next/font/google";
 import { LibraryHeader } from "@/components/library-header";
 import { MangaTable } from "@/components/manga-table";
 import { useShelf } from "@/hooks/use-shelf";
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-});
 
 export default function Home() {
   const { shelf, isHydrated } = useShelf();
@@ -28,7 +22,7 @@ export default function Home() {
 
   return (
     <div
-      className={`${jetbrainsMono.className} relative min-h-screen overflow-hidden bg-terminal-bg text-terminal-green`}
+      className="font-mono relative min-h-screen overflow-hidden bg-terminal-bg text-terminal-green"
     >
       {/* CRT scan-line overlay */}
       <div

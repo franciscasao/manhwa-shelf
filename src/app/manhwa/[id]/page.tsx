@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { JetBrains_Mono } from "next/font/google";
 import { AniListMediaDetail, fetchManhwaById, mapAniListToManga } from "@/lib/anilist";
 import { useShelf } from "@/hooks/use-shelf";
 import { ArrowLeft } from "lucide-react";
@@ -11,8 +10,6 @@ import { ManhwaMetadata } from "@/components/manhwa/manhwa-metadata";
 import { ManhwaSynopsis } from "@/components/manhwa/manhwa-synopsis";
 import { ChapterDirectory } from "@/components/manhwa/chapter-directory";
 import { ManhwaRelations } from "@/components/manhwa/manhwa-relations";
-
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "700"] });
 
 export default function ManhwaDetailPage() {
   const params = useParams();
@@ -66,7 +63,7 @@ export default function ManhwaDetailPage() {
   };
 
   return (
-    <div className={`${jetbrainsMono.className} relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden`}>
+    <div className="font-mono relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden">
       {/* CRT scanline overlay */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-50" style={{
         background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px)"

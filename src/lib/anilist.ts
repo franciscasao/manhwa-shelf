@@ -44,9 +44,22 @@ export interface AniListMediaDetail extends AniListMedia {
   } | null;
 }
 
+export interface PageInfo {
+  currentPage: number;
+  lastPage: number;
+  hasNextPage: boolean;
+  total: number;
+}
+
+export interface SearchResult {
+  media: AniListMedia[];
+  pageInfo: PageInfo;
+}
+
 const SEARCH_QUERY = `
   query SearchMedia($search: String!, $countryOfOrigin: CountryCode, $page: Int, $perPage: Int) {
     Page(page: $page, perPage: $perPage) {
+      pageInfo { currentPage lastPage hasNextPage total }
       media(search: $search, format: MANGA, countryOfOrigin: $countryOfOrigin, sort: SEARCH_MATCH) {
         id
         title { english romaji }
@@ -69,7 +82,7 @@ export async function searchMedia(
   origin: SearchOrigin = "KR",
   page = 1,
   perPage = 20,
-): Promise<AniListMedia[]> {
+): Promise<SearchResult> {
   const variables: Record<string, unknown> = { search: query, page, perPage };
   if (origin !== "ALL") {
     variables.countryOfOrigin = origin;
@@ -89,14 +102,24 @@ export async function searchMedia(
   }
 
   const json = await res.json();
-  return json.data?.Page?.media ?? [];
+  const pageData = json.data?.Page;
+  const rawPageInfo = pageData?.pageInfo;
+  return {
+    media: pageData?.media ?? [],
+    pageInfo: {
+      currentPage: rawPageInfo?.currentPage ?? page,
+      lastPage: rawPageInfo?.lastPage ?? 1,
+      hasNextPage: rawPageInfo?.hasNextPage ?? false,
+      total: rawPageInfo?.total ?? 0,
+    },
+  };
 }
 
 export async function searchManhwa(
   query: string,
   page = 1,
   perPage = 20,
-): Promise<AniListMedia[]> {
+): Promise<SearchResult> {
   return searchMedia(query, "KR", page, perPage);
 }
 
