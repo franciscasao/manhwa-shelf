@@ -1,18 +1,12 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
-import { Manga, DownloadStatus } from "@/lib/types";
-
-function getDownloadStatus(manga: Manga): DownloadStatus {
-  if (manga.chapters.downloaded === 0) return "not-downloaded";
-  if (manga.chapters.total && manga.chapters.downloaded >= manga.chapters.total) return "complete";
-  return "partial";
-}
+import { Manga } from "@/lib/types";
+import { getDownloadStatus } from "@/lib/manga-utils";
 
 export function MangaCard({ manga }: { manga: Manga }) {
-  const progress =
-    manga.chapters.total
-      ? Math.round((manga.chapters.downloaded / manga.chapters.total) * 100)
-      : null;
+  const progress = manga.chapters.total
+    ? Math.round((manga.chapters.downloaded / manga.chapters.total) * 100)
+    : null;
 
   return (
     <Card className="overflow-hidden transition-shadow hover:shadow-lg">
@@ -25,7 +19,9 @@ export function MangaCard({ manga }: { manga: Manga }) {
         />
       </div>
       <CardContent className="p-4">
-        <h3 className="font-semibold leading-tight line-clamp-1">{manga.title}</h3>
+        <h3 className="font-semibold leading-tight line-clamp-1">
+          {manga.title}
+        </h3>
         <p className="text-sm text-muted-foreground mt-1">{manga.author}</p>
         <div className="flex items-center gap-2 mt-2">
           <StatusBadge status={getDownloadStatus(manga)} />
