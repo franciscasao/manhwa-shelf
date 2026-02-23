@@ -5,6 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-terminal-green: #00ff9f;
+  --color-terminal-cyan: #00d4ff;
+  --color-terminal-orange: #ffaa00;
+  --color-terminal-bg: #0a0a0f;
+  --color-terminal-row-hover: #111120;
+  --color-terminal-dim: #555;
+  --color-terminal-muted: #333;
+  --color-terminal-border: #1a3a2a;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
