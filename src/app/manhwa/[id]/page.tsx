@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { AniListMediaDetail, fetchManhwaById, mapAniListToManga } from "@/lib/anilist";
+import { mapAniListToManga } from "@/lib/anilist";
 import { useShelf } from "@/hooks/use-shelf";
+import { useMediaDetail } from "@/hooks/use-media-detail";
 import { ArrowLeft } from "lucide-react";
 import { ManhwaHeader } from "@/components/manhwa/manhwa-header";
 import { ManhwaMetadata } from "@/components/manhwa/manhwa-metadata";
 import { ManhwaSynopsis } from "@/components/manhwa/manhwa-synopsis";
 import { ChapterDirectory } from "@/components/manhwa/chapter-directory";
+import { ManhwaExternalLinks } from "@/components/manhwa/manhwa-external-links";
 import { ManhwaRelations } from "@/components/manhwa/manhwa-relations";
 
 export default function ManhwaDetailPage() {
@@ -16,9 +18,8 @@ export default function ManhwaDetailPage() {
   const router = useRouter();
   const id = Number(params.id);
 
-  const [media, setMedia] = useState<AniListMediaDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { media, isLoading, error: fetchError } = useMediaDetail(id);
+  const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
   const { shelf, addToShelf, removeFromShelf, isOnShelf } = useShelf();
 
   const bootLines = useRef([
@@ -27,28 +28,6 @@ export default function ManhwaDetailPage() {
     `> querying media id: ${id}`,
     "> resolving metadata...",
   ]);
-
-  useEffect(() => {
-    if (!id || isNaN(id)) {
-      setError("Invalid media ID");
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await fetchManhwaById(id);
-        if (!cancelled) setMedia(data);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to fetch");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [id]);
 
   const shelfEntry = shelf.find((m) => m.id === String(id));
 
@@ -130,6 +109,11 @@ export default function ManhwaDetailPage() {
             {/* Synopsis */}
             <div className="detail-section" style={{ animationDelay: "200ms" }}>
               <ManhwaSynopsis description={media.description} />
+            </div>
+
+            {/* External Sources */}
+            <div className="detail-section" style={{ animationDelay: "250ms" }}>
+              <ManhwaExternalLinks externalLinks={media.externalLinks} />
             </div>
 
             {/* Chapter Directory */}

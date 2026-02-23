@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useShelf } from "@/hooks/use-shelf";
 import { Manga } from "@/lib/types";
 import { getDownloadStatus } from "@/lib/manga-utils";
@@ -9,6 +9,7 @@ import { LibraryToolbar } from "@/components/library/library-toolbar";
 import { LibraryTerminalCard } from "@/components/library/library-terminal-card";
 import { LibraryListRow } from "@/components/library/library-list-row";
 import { LibraryEmptyState } from "@/components/library/library-empty-state";
+import { TerminalPagination } from "@/components/terminal-pagination";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+const PAGE_SIZE = 20;
 
 type FilterValue = "all" | "complete" | "partial" | "not-downloaded";
 type SortValue = "title" | "rating" | "chapters" | "size" | "updated";
@@ -59,6 +62,7 @@ export default function LibraryPage() {
   const [sortBy, setSortBy] = useState<SortValue>("title");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   // Compute stats
@@ -108,6 +112,16 @@ export default function LibraryPage() {
     // Sort
     return sortManga(result, sortBy);
   }, [shelf, activeFilter, searchQuery, sortBy]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, searchQuery, sortBy]);
+
+  const totalPages = Math.ceil(filteredManga.length / PAGE_SIZE);
+  const paginatedManga = filteredManga.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   const counts = {
     all: shelf.length,
@@ -195,6 +209,12 @@ export default function LibraryPage() {
           sort: --{sortBy}
           <span className="text-terminal-muted mx-2">|</span>
           view: {viewMode}
+          {totalPages > 1 && (
+            <>
+              <span className="text-terminal-muted mx-2">|</span>
+              page {currentPage}/{totalPages}
+            </>
+          )}
         </div>
 
         {/* Content area */}
@@ -239,7 +259,7 @@ export default function LibraryPage() {
           >
             {viewMode === "grid" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {filteredManga.map((manga, index) => (
+                {paginatedManga.map((manga, index) => (
                   <LibraryTerminalCard
                     key={manga.id}
                     manga={manga}
@@ -250,7 +270,7 @@ export default function LibraryPage() {
               </div>
             ) : (
               <div className="space-y-1">
-                {filteredManga.map((manga, index) => (
+                {paginatedManga.map((manga, index) => (
                   <LibraryListRow
                     key={manga.id}
                     manga={manga}
@@ -262,6 +282,12 @@ export default function LibraryPage() {
             )}
           </div>
         )}
+
+        <TerminalPagination
+          currentPage={currentPage}
+          hasNextPage={currentPage < totalPages}
+          onPageChange={setCurrentPage}
+        />
 
         {/* Remove confirmation dialog */}
         <Dialog
@@ -306,7 +332,7 @@ export default function LibraryPage() {
               <span className="text-terminal-green">OK</span>
               <span className="text-terminal-dim">{"]"}</span> file-manager v2.0
               <span className="text-terminal-muted"> | </span>
-              showing {filteredManga.length}/{shelf.length} titles
+              showing {paginatedManga.length}/{shelf.length} titles
               <span className="text-terminal-muted"> | </span>
               {stats.totalSizeGB.toFixed(1)} GB indexed
             </span>

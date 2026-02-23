@@ -1,14 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import {
-  AniListMedia,
-  PageInfo,
-  searchMedia,
-  mapAniListToManga,
-} from "@/lib/anilist";
+import { mapAniListToManga } from "@/lib/anilist";
 import { SearchOrigin } from "@/lib/types";
 import { useShelf } from "@/hooks/use-shelf";
+import { useSearchMedia } from "@/hooks/use-search-media";
 import { Plus, Check } from "lucide-react";
 import { MangaTerminalCard } from "@/components/manga-terminal-card";
 import { TerminalPagination } from "@/components/terminal-pagination";
@@ -16,20 +12,16 @@ import { TerminalPagination } from "@/components/terminal-pagination";
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [origin, setOrigin] = useState<SearchOrigin>("KR");
-  const [results, setResults] = useState<AniListMedia[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const { addToShelf, isOnShelf } = useShelf();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionStartRef = useRef(
     new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
   );
-  const loadStartRef = useRef<number | null>(null);
-  const [queryMs, setQueryMs] = useState<number | null>(null);
+
+  const { results, pageInfo, isLoading, error, hasSearched, queryMs } =
+    useSearchMedia(query, origin, currentPage);
 
   const originLabel =
     origin === "KR" ? "MANHWA" : origin === "JP" ? "MANGA" : "MANGA/MANHWA";
@@ -38,50 +30,16 @@ export default function SearchPage() {
     inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (isLoading) {
-      loadStartRef.current = Date.now();
-      setQueryMs(null);
-    } else if (loadStartRef.current !== null) {
-      setQueryMs(Date.now() - loadStartRef.current);
-      loadStartRef.current = null;
-    }
-  }, [isLoading]);
-
   // Reset to page 1 when query or origin changes
-  useEffect(() => {
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
     setCurrentPage(1);
-  }, [query, origin]);
+  };
 
-  useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      setHasSearched(false);
-      setError(null);
-      setPageInfo(null);
-      return;
-    }
-
-    const timer = setTimeout(
-      async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const data = await searchMedia(query.trim(), origin, currentPage);
-          setResults(data.media);
-          setPageInfo(data.pageInfo);
-          setHasSearched(true);
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "Search failed");
-        } finally {
-          setIsLoading(false);
-        }
-      },
-      currentPage === 1 ? 500 : 0,
-    );
-
-    return () => clearTimeout(timer);
-  }, [query, origin, currentPage]);
+  const handleOriginChange = (value: SearchOrigin) => {
+    setOrigin(value);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="font-mono relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden">
@@ -129,7 +87,7 @@ export default function SearchPage() {
             MODE:
           </span>
           <button
-            onClick={() => setOrigin("ALL")}
+            onClick={() => handleOriginChange("ALL")}
             className={`border px-3 py-1 text-xs font-mono transition-colors ${
               origin === "ALL"
                 ? "border-terminal-cyan bg-terminal-cyan/10 text-terminal-cyan"
@@ -139,7 +97,7 @@ export default function SearchPage() {
             --all
           </button>
           <button
-            onClick={() => setOrigin("KR")}
+            onClick={() => handleOriginChange("KR")}
             className={`border px-3 py-1 text-xs font-mono transition-colors ${
               origin === "KR"
                 ? "border-terminal-cyan bg-terminal-cyan/10 text-terminal-cyan"
@@ -149,7 +107,7 @@ export default function SearchPage() {
             --manhwa (KR)
           </button>
           <button
-            onClick={() => setOrigin("JP")}
+            onClick={() => handleOriginChange("JP")}
             className={`border px-3 py-1 text-xs font-mono transition-colors ${
               origin === "JP"
                 ? "border-terminal-cyan bg-terminal-cyan/10 text-terminal-cyan"
@@ -179,7 +137,7 @@ export default function SearchPage() {
               ref={inputRef}
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => handleQueryChange(e.target.value)}
               placeholder="type title to search anilist..."
               className="flex-1 bg-transparent outline-none border-none text-terminal-green placeholder:text-terminal-muted font-mono text-sm md:text-base"
               style={{ caretColor: "#00d4ff" }}

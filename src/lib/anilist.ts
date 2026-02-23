@@ -19,6 +19,15 @@ export interface AniListMedia {
   };
 }
 
+export interface AniListExternalLink {
+  url: string;
+  site: string;
+  type: string | null;
+  language: string | null;
+  icon: string | null;
+  color: string | null;
+}
+
 export interface AniListMediaDetail extends AniListMedia {
   description: string | null;
   bannerImage: string | null;
@@ -30,6 +39,7 @@ export interface AniListMediaDetail extends AniListMedia {
   startDate: { year: number | null; month: number | null; day: number | null } | null;
   endDate: { year: number | null; month: number | null; day: number | null } | null;
   source: string | null;
+  externalLinks: AniListExternalLink[] | null;
   relations: {
     edges: {
       relationType: string;
@@ -147,6 +157,7 @@ const DETAIL_QUERY = `
         nodes { name { full } }
         edges { role node { name { full } } }
       }
+      externalLinks { url site type language icon color }
       relations {
         edges {
           relationType
