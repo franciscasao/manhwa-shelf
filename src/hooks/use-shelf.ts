@@ -1,41 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/db";
 import { Manga } from "@/lib/types";
 
-const STORAGE_KEY = "manhwa-shelf-items";
-
 export function useShelf() {
-  const [shelf, setShelf] = useState<Manga[] | null>(null);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      setShelf(stored ? JSON.parse(stored) : []);
-    } catch {
-      setShelf([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (shelf === null) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(shelf));
-    } catch {
-      // ignore storage errors
-    }
-  }, [shelf]);
+  const shelf = useLiveQuery(() => db.shelf.toArray());
 
   const addToShelf = (manga: Manga) => {
-    setShelf((prev) => {
-      if (prev === null) return [manga];
-      if (prev.some((m) => m.id === manga.id)) return prev;
-      return [...prev, manga];
-    });
+    db.shelf.put(manga);
   };
 
   const removeFromShelf = (id: string) => {
-    setShelf((prev) => (prev === null ? [] : prev.filter((m) => m.id !== id)));
+    db.shelf.delete(id);
   };
 
   const isOnShelf = (id: string): boolean => {
@@ -44,7 +21,7 @@ export function useShelf() {
 
   return {
     shelf: shelf ?? [],
-    isHydrated: shelf !== null,
+    isHydrated: shelf !== undefined,
     addToShelf,
     removeFromShelf,
     isOnShelf,
