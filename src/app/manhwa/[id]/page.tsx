@@ -3,8 +3,10 @@
 import { useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { mapAniListToManga } from "@/lib/anilist";
+import { findWebtoonLink } from "@/lib/webtoon";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
+import { useWebtoonEpisodes } from "@/hooks/use-webtoon-episodes";
 import { ArrowLeft } from "lucide-react";
 import { ManhwaHeader } from "@/components/manhwa/manhwa-header";
 import { ManhwaMetadata } from "@/components/manhwa/manhwa-metadata";
@@ -21,6 +23,14 @@ export default function ManhwaDetailPage() {
   const { media, isLoading, error: fetchError } = useMediaDetail(id);
   const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
   const { shelf, addToShelf, removeFromShelf, isOnShelf } = useShelf();
+
+  const webtoonParams = media ? findWebtoonLink(media.externalLinks) : null;
+  const {
+    episodes: webtoonEpisodes,
+    isLoading: webtoonLoading,
+    error: webtoonError,
+    refetch: webtoonRefetch,
+  } = useWebtoonEpisodes(webtoonParams);
 
   const bootLines = useRef([
     "> initializing file inspector...",
@@ -122,6 +132,11 @@ export default function ManhwaDetailPage() {
                 totalChapters={media.chapters}
                 downloaded={shelfEntry?.chapters.downloaded ?? 0}
                 isOnShelf={isOnShelf(String(id))}
+                webtoonEpisodes={webtoonEpisodes}
+                webtoonLoading={webtoonLoading}
+                webtoonError={webtoonError}
+                webtoonUrl={webtoonParams?.url}
+                onRefetch={webtoonRefetch}
               />
             </div>
 
