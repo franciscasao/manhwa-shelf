@@ -1,9 +1,9 @@
 "use client";
 
-import { sampleManga } from "@/data/sample";
 import { JetBrains_Mono } from "next/font/google";
 import { LibraryHeader } from "@/components/library-header";
 import { MangaTable } from "@/components/manga-table";
+import { useShelf } from "@/hooks/use-shelf";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -11,17 +11,20 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export default function Home() {
-  const totalTitles = sampleManga.length;
-  const totalChapters = sampleManga.reduce(
-    (sum, m) => sum + m.chapters.downloaded,
-    0,
-  );
-  const totalSizeGB = sampleManga.reduce((sum, m) => {
-    const match = m.sizeOnDisk.match(/([\d.]+)\s*(GB|MB)/i);
-    if (!match) return sum;
-    const val = parseFloat(match[1]);
-    return sum + (match[2].toUpperCase() === "GB" ? val : val / 1024);
-  }, 0);
+  const { shelf, isHydrated } = useShelf();
+
+  const totalTitles = isHydrated ? shelf.length : null;
+  const totalChapters = isHydrated
+    ? shelf.reduce((sum, m) => sum + m.chapters.downloaded, 0)
+    : null;
+  const totalSizeGB = isHydrated
+    ? shelf.reduce((sum, m) => {
+        const match = m.sizeOnDisk.match(/([\d.]+)\s*(GB|MB)/i);
+        if (!match) return sum;
+        const val = parseFloat(match[1]);
+        return sum + (match[2].toUpperCase() === "GB" ? val : val / 1024);
+      }, 0)
+    : null;
 
   return (
     <div
@@ -49,13 +52,14 @@ export default function Home() {
           <div>{">"} initializing download manager...</div>
           <div>{">"} scanning local archive...</div>
           <div>
-            {">"} found {totalTitles} titles ({totalChapters.toLocaleString()}{" "}
+            {">"} found {totalTitles ?? "—"} titles (
+            {totalChapters != null ? totalChapters.toLocaleString() : "—"}{" "}
             chapters indexed)
           </div>
           <div className="text-terminal-green">{">"} ready.</div>
         </div>
 
-        <MangaTable manga={sampleManga} />
+        <MangaTable manga={shelf} />
 
         {/* Footer */}
         <div className="mt-6 border-t border-terminal-border pt-4 text-xs text-terminal-muted">

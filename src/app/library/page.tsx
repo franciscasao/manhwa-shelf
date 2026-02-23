@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { MangaCard } from "@/components/manga-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { sampleManga } from "@/data/sample";
 import { DownloadStatus, Manga } from "@/lib/types";
+import { useShelf } from "@/hooks/use-shelf";
 
 function getDownloadStatus(manga: Manga): DownloadStatus {
   if (manga.chapters.downloaded === 0) return "not-downloaded";
@@ -21,11 +21,12 @@ const tabs: { value: "all" | DownloadStatus; label: string }[] = [
 
 export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState("all");
+  const { shelf } = useShelf();
 
   const filtered =
     activeTab === "all"
-      ? sampleManga
-      : sampleManga.filter((m) => getDownloadStatus(m) === activeTab);
+      ? shelf
+      : shelf.filter((m) => getDownloadStatus(m) === activeTab);
 
   return (
     <div>

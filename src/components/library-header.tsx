@@ -1,7 +1,7 @@
 interface LibraryHeaderProps {
-  totalTitles: number;
-  totalChapters: number;
-  totalSizeGB: number;
+  totalTitles: number | null;
+  totalChapters: number | null;
+  totalSizeGB: number | null;
 }
 
 export function LibraryHeader({
@@ -29,11 +29,11 @@ export function LibraryHeader({
         <span className="text-terminal-dim">{"["}</span>
         <span className="text-terminal-green">SYS</span>
         <span className="text-terminal-dim">{"]"}</span> TOTAL:{" "}
-        <span className="text-white">{totalTitles}</span> TITLES{" "}
+        <span className="text-white">{totalTitles ?? "—"}</span> TITLES{" "}
         <span className="text-terminal-muted">|</span>{" "}
-        <span className="text-white">{totalChapters.toLocaleString()}</span> CHS{" "}
+        <span className="text-white">{totalChapters != null ? totalChapters.toLocaleString() : "—"}</span> CHS{" "}
         <span className="text-terminal-muted">|</span>{" "}
-        <span className="text-white">{totalSizeGB.toFixed(1)}</span> GB
+        <span className="text-white">{totalSizeGB != null ? totalSizeGB.toFixed(1) : "—"}</span> GB
         <span className="blink-cursor text-terminal-green">_</span>
       </div>
     </div>
