@@ -19,6 +19,31 @@ export interface AniListMedia {
   };
 }
 
+export interface AniListMediaDetail extends AniListMedia {
+  description: string | null;
+  bannerImage: string | null;
+  tags: { name: string; rank: number }[];
+  popularity: number | null;
+  favourites: number | null;
+  status: string | null;
+  volumes: number | null;
+  startDate: { year: number | null; month: number | null; day: number | null } | null;
+  endDate: { year: number | null; month: number | null; day: number | null } | null;
+  source: string | null;
+  relations: {
+    edges: {
+      relationType: string;
+      node: {
+        id: number;
+        title: { english: string | null; romaji: string };
+        format: string | null;
+        coverImage: { large: string };
+        type: string;
+      };
+    }[];
+  } | null;
+}
+
 const SEARCH_QUERY = `
   query SearchMedia($search: String!, $countryOfOrigin: CountryCode, $page: Int, $perPage: Int) {
     Page(page: $page, perPage: $perPage) {
@@ -73,6 +98,66 @@ export async function searchManhwa(
   perPage = 20,
 ): Promise<AniListMedia[]> {
   return searchMedia(query, "KR", page, perPage);
+}
+
+const DETAIL_QUERY = `
+  query GetMedia($id: Int!) {
+    Media(id: $id, type: MANGA) {
+      id
+      title { english romaji }
+      coverImage { large }
+      bannerImage
+      countryOfOrigin
+      genres
+      tags { name rank }
+      averageScore
+      popularity
+      favourites
+      chapters
+      volumes
+      status
+      description(asHtml: false)
+      source
+      startDate { year month day }
+      endDate { year month day }
+      staff(sort: RELEVANCE) {
+        nodes { name { full } }
+        edges { role node { name { full } } }
+      }
+      relations {
+        edges {
+          relationType
+          node {
+            id
+            title { english romaji }
+            format
+            coverImage { large }
+            type
+          }
+        }
+      }
+    }
+  }
+`;
+
+export async function fetchManhwaById(id: number): Promise<AniListMediaDetail> {
+  const res = await fetch("/api/anilist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: DETAIL_QUERY,
+      variables: { id },
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Fetch failed: ${res.status}`);
+  }
+
+  const json = await res.json();
+  const media = json.data?.Media;
+  if (!media) throw new Error("Media not found");
+  return media;
 }
 
 export function mapAniListToManga(media: AniListMedia, origin?: MangaOrigin): Manga {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { Manga } from "@/lib/types";
 import { getDownloadStatus, getPercent, statusConfig } from "@/lib/manga-utils";
@@ -28,59 +29,61 @@ export function LibraryTerminalCard({ manga, index, onRemove }: LibraryTerminalC
         className={`absolute left-0 top-0 bottom-0 w-[2px] bg-${config.color}`}
       />
 
-      {/* Cover image */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-terminal-bg">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={manga.coverImage}
-          alt={manga.title}
-          className={`h-full w-full object-cover contrast-[1.15] saturate-[0.65] ${
-            isGhost ? "opacity-30 grayscale" : "opacity-85 group-hover:opacity-95"
-          } transition-opacity`}
-        />
-        {/* Scanline overlay */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 1px, transparent 1px, transparent 2px)",
-          }}
-        />
-        {/* Rating badge */}
-        {manga.rating > 0 && (
-          <div className="absolute top-1 right-1 bg-terminal-bg/80 px-1.5 py-0.5 text-[0.6rem] font-mono text-terminal-orange">
-            ★ {manga.rating}
+      <Link href={`/manhwa/${manga.id}`} className="flex flex-col flex-1">
+        {/* Cover image */}
+        <div className="relative aspect-[3/4] w-full overflow-hidden bg-terminal-bg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={manga.coverImage}
+            alt={manga.title}
+            className={`h-full w-full object-cover contrast-[1.15] saturate-[0.65] ${
+              isGhost ? "opacity-30 grayscale" : "opacity-85 group-hover:opacity-95"
+            } transition-opacity`}
+          />
+          {/* Scanline overlay */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 1px, transparent 1px, transparent 2px)",
+            }}
+          />
+          {/* Rating badge */}
+          {manga.rating > 0 && (
+            <div className="absolute top-1 right-1 bg-terminal-bg/80 px-1.5 py-0.5 text-[0.6rem] font-mono text-terminal-orange">
+              ★ {manga.rating}
+            </div>
+          )}
+        </div>
+
+        {/* Info area */}
+        <div className="flex flex-col gap-1 px-2 py-2 text-xs">
+          <div className="flex items-start gap-1">
+            <span className="text-terminal-dim shrink-0">{">"}</span>
+            <span className={`${config.textClass} line-clamp-1 font-medium leading-tight`}>
+              {manga.title}
+            </span>
           </div>
-        )}
-      </div>
+          <div className="text-terminal-dim text-[0.6rem] line-clamp-1 pl-3">
+            {manga.author}
+          </div>
 
-      {/* Info area */}
-      <div className="flex flex-col gap-1 px-2 py-2 text-xs">
-        <div className="flex items-start gap-1">
-          <span className="text-terminal-dim shrink-0">{">"}</span>
-          <span className={`${config.textClass} line-clamp-1 font-medium leading-tight`}>
-            {manga.title}
-          </span>
-        </div>
-        <div className="text-terminal-dim text-[0.6rem] line-clamp-1 pl-3">
-          {manga.author}
-        </div>
+          <div className="mt-1">
+            <ProgressDisplay manga={manga} />
+          </div>
 
-        <div className="mt-1">
-          <ProgressDisplay manga={manga} />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={status} />
+            <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
+              {chaptersStr} ch
+            </span>
+          </div>
+          <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
+            {manga.sizeOnDisk}
+          </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <StatusBadge status={status} />
-          <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
-            {chaptersStr} ch
-          </span>
-        </div>
-        <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
-          {manga.sizeOnDisk}
-        </div>
-      </div>
+      </Link>
 
       {/* Remove button — visible on hover */}
       <button

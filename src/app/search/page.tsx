@@ -9,8 +9,12 @@ import { getDownloadStatus, statusConfig } from "@/lib/manga-utils";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressDisplay } from "@/components/progress-display";
 import { Plus, Check } from "lucide-react";
+import Link from "next/link";
 
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "700"] });
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+});
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
@@ -23,14 +27,17 @@ export default function SearchPage() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionStartRef = useRef(
-    new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC"
+    new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
   );
   const loadStartRef = useRef<number | null>(null);
   const [queryMs, setQueryMs] = useState<number | null>(null);
 
-  const originLabel = origin === "KR" ? "MANHWA" : origin === "JP" ? "MANGA" : "MANGA/MANHWA";
+  const originLabel =
+    origin === "KR" ? "MANHWA" : origin === "JP" ? "MANGA" : "MANGA/MANHWA";
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (isLoading) {
@@ -68,32 +75,42 @@ export default function SearchPage() {
   }, [query, origin]);
 
   return (
-    <div className={`${jetbrainsMono.className} relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden`}>
-
+    <div
+      className={`${jetbrainsMono.className} relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden`}
+    >
       {/* CRT scanline overlay */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-50" style={{
-        background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px)"
-      }} />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-50"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px)",
+        }}
+      />
 
       <div className="relative z-10 mx-auto max-w-[1200px] animate-[flicker_4s_infinite] px-3 py-6 md:px-8 md:py-10">
-
         {/* SECTION 1: Terminal system header */}
         <div className="mb-6 border-b border-terminal-border pb-4">
-          <div className="mb-1 text-xs text-terminal-muted">{originLabel}-DB v2.0 -- AniList Query Interface</div>
+          <div className="mb-1 text-xs text-terminal-muted">
+            {originLabel}-DB v2.0 -- AniList Query Interface
+          </div>
           <div className="mb-3 text-xs text-terminal-dim">
             session: {sessionStartRef.current}
             <span className="mx-2 text-terminal-muted">|</span>
             endpoint: api.anilist.co/v2
             <span className="mx-2 text-terminal-muted">|</span>
-            <span className="text-terminal-green">connected<span className="blink-cursor">_</span></span>
+            <span className="text-terminal-green">
+              connected<span className="blink-cursor">_</span>
+            </span>
           </div>
           <div className="border border-terminal-border/60 bg-terminal-cyan/[0.03] px-3 py-2 text-xs text-terminal-cyan md:px-5 md:py-3 md:text-sm">
             <span className="text-terminal-dim">[</span>
             <span className="text-terminal-green">DB</span>
-            <span className="text-terminal-dim">]</span>
-            {" "}{originLabel}-SHELF ARCHIVE
+            <span className="text-terminal-dim">]</span> {originLabel}-SHELF
+            ARCHIVE
             <span className="text-terminal-muted"> | </span>SOURCE: ANILIST
-            <span className="text-terminal-muted"> | </span>COUNTRY: {origin === "ALL" ? "JP+KR" : origin}
+            <span className="text-terminal-muted"> | </span>COUNTRY:{" "}
+            {origin === "ALL" ? "JP+KR" : origin}
             <span className="text-terminal-muted"> | </span>FORMAT: MANGA
             <span className="blink-cursor text-terminal-green">_</span>
           </div>
@@ -101,7 +118,9 @@ export default function SearchPage() {
 
         {/* SECTION 1.5: Origin toggle */}
         <div className="mb-4 flex items-center gap-2">
-          <span className="text-[0.65rem] text-terminal-muted tracking-widest mr-1">MODE:</span>
+          <span className="text-[0.65rem] text-terminal-muted tracking-widest mr-1">
+            MODE:
+          </span>
           <button
             onClick={() => setOrigin("ALL")}
             className={`border px-3 py-1 text-xs font-mono transition-colors ${
@@ -136,10 +155,16 @@ export default function SearchPage() {
 
         {/* SECTION 2: Query prompt */}
         <div className="mb-2">
-          <div className="text-[0.65rem] text-terminal-muted mb-1 tracking-widest">ENTER SEARCH QUERY</div>
-          <div className={`flex items-center border px-3 py-2 md:px-4 md:py-3 transition-colors ${
-            query.length > 0 ? "border-terminal-cyan query-input-active" : "border-terminal-border"
-          }`}>
+          <div className="text-[0.65rem] text-terminal-muted mb-1 tracking-widest">
+            ENTER SEARCH QUERY
+          </div>
+          <div
+            className={`flex items-center border px-3 py-2 md:px-4 md:py-3 transition-colors ${
+              query.length > 0
+                ? "border-terminal-cyan query-input-active"
+                : "border-terminal-border"
+            }`}
+          >
             <span className="mr-2 select-none font-bold text-terminal-cyan text-sm md:text-base shrink-0">
               {">"} QUERY://
             </span>
@@ -150,16 +175,18 @@ export default function SearchPage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="type title to search anilist..."
               className="flex-1 bg-transparent outline-none border-none text-terminal-green placeholder:text-terminal-muted font-mono text-sm md:text-base"
-              style={{ caretColor: '#00d4ff' }}
+              style={{ caretColor: "#00d4ff" }}
               autoComplete="off"
               spellCheck={false}
             />
             <span className="ml-2 shrink-0 text-[0.65rem] text-terminal-dim tabular-nums">
-              {isLoading
-                ? <span className="text-terminal-orange animate-pulse">QUERYING...</span>
-                : query.length > 0
-                  ? <span>{query.length} chars</span>
-                  : null}
+              {isLoading ? (
+                <span className="text-terminal-orange animate-pulse">
+                  QUERYING...
+                </span>
+              ) : query.length > 0 ? (
+                <span>{query.length} chars</span>
+              ) : null}
             </span>
           </div>
           <div className="mt-1 text-[0.6rem] text-terminal-muted">
@@ -171,23 +198,43 @@ export default function SearchPage() {
         {isLoading && (
           <div className="mt-6">
             <div className="text-xs text-terminal-dim mb-3 font-mono space-y-0.5">
-              <div>{">"} executing query: <span className="text-terminal-cyan">&quot;{query}&quot;</span></div>
+              <div>
+                {">"} executing query:{" "}
+                <span className="text-terminal-cyan">&quot;{query}&quot;</span>
+              </div>
               <div>{">"} connecting to anilist graphql endpoint...</div>
-              <div>{">"} filtering: {origin === "ALL" ? "countryOfOrigin=*, " : `countryOfOrigin=${origin}, `}format=MANGA</div>
-              <div className="text-terminal-orange">{">"} fetching results<span className="blink-cursor">_</span></div>
+              <div>
+                {">"} filtering:{" "}
+                {origin === "ALL"
+                  ? "countryOfOrigin=*, "
+                  : `countryOfOrigin=${origin}, `}
+                format=MANGA
+              </div>
+              <div className="text-terminal-orange">
+                {">"} fetching results<span className="blink-cursor">_</span>
+              </div>
             </div>
             <div className="space-y-1">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i}
+                <div
+                  key={i}
                   className="flex items-center gap-3 border border-terminal-border/30 px-3 py-2"
                   style={{ opacity: 1 - i * 0.1 }}
                 >
                   <div className="h-[38px] w-[28px] shrink-0 bg-terminal-border/30 animate-pulse" />
                   <div className="flex-1 space-y-1.5">
-                    <div className="h-2 bg-terminal-border/40 animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
-                    <div className="h-1.5 bg-terminal-border/20 animate-pulse" style={{ width: `${30 + (i % 4) * 10}%` }} />
+                    <div
+                      className="h-2 bg-terminal-border/40 animate-pulse"
+                      style={{ width: `${60 + (i % 3) * 15}%` }}
+                    />
+                    <div
+                      className="h-1.5 bg-terminal-border/20 animate-pulse"
+                      style={{ width: `${30 + (i % 4) * 10}%` }}
+                    />
                   </div>
-                  <div className="text-[0.6rem] text-terminal-muted shrink-0">loading...</div>
+                  <div className="text-[0.6rem] text-terminal-muted shrink-0">
+                    loading...
+                  </div>
                 </div>
               ))}
             </div>
@@ -198,21 +245,36 @@ export default function SearchPage() {
         {error && !isLoading && (
           <div className="mt-6 border border-terminal-orange/40 bg-terminal-orange/[0.03] px-3 py-3 text-xs font-mono space-y-0.5">
             <div className="text-terminal-orange">{">"} QUERY ERROR</div>
-            <div className="text-terminal-orange/70">{">"} ERR: {error}</div>
-            <div className="text-terminal-muted">{">"} check connection and retry</div>
+            <div className="text-terminal-orange/70">
+              {">"} ERR: {error}
+            </div>
+            <div className="text-terminal-muted">
+              {">"} check connection and retry
+            </div>
           </div>
         )}
         {!isLoading && !error && hasSearched && results.length === 0 && (
           <div className="mt-6 text-xs font-mono text-terminal-muted space-y-0.5">
-            <div>{">"} query: <span className="text-terminal-cyan">&quot;{query}&quot;</span></div>
-            <div>{">"} results: <span className="text-terminal-orange">0</span></div>
-            <div>{">"} no matching titles in anilist {originLabel.toLowerCase()} archive</div>
+            <div>
+              {">"} query:{" "}
+              <span className="text-terminal-cyan">&quot;{query}&quot;</span>
+            </div>
+            <div>
+              {">"} results: <span className="text-terminal-orange">0</span>
+            </div>
+            <div>
+              {">"} no matching titles in anilist {originLabel.toLowerCase()}{" "}
+              archive
+            </div>
           </div>
         )}
         {!isLoading && !error && !hasSearched && (
           <div className="mt-6 text-xs font-mono text-terminal-muted space-y-0.5">
             <div>{">"} awaiting query input...</div>
-            <div>{">"} ready<span className="blink-cursor text-terminal-green">_</span></div>
+            <div>
+              {">"} ready
+              <span className="blink-cursor text-terminal-green">_</span>
+            </div>
           </div>
         )}
 
@@ -220,19 +282,25 @@ export default function SearchPage() {
         {!isLoading && !error && results.length > 0 && (
           <div className="mt-6">
             <div className="mb-3 text-[0.65rem] font-mono text-terminal-dim border-b border-terminal-border pb-2">
-              <span className="text-terminal-green">{">"}</span>
-              {" "}query complete
+              <span className="text-terminal-green">{">"}</span> query complete
               <span className="text-terminal-muted mx-2">|</span>
-              <span className="text-white">{results.length}</span> records returned
+              <span className="text-white">{results.length}</span> records
+              returned
               {queryMs !== null && (
-                <><span className="text-terminal-muted mx-2">|</span>{queryMs}ms</>
+                <>
+                  <span className="text-terminal-muted mx-2">|</span>
+                  {queryMs}ms
+                </>
               )}
               <span className="text-terminal-muted mx-2">|</span>
               sorted: SEARCH_MATCH
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {results.map((media, index) => {
-                const manga = mapAniListToManga(media, origin === "ALL" ? undefined : origin);
+                const manga = mapAniListToManga(
+                  media,
+                  origin === "ALL" ? undefined : origin,
+                );
                 const onShelf = isOnShelf(manga.id);
                 const status = getDownloadStatus(manga);
                 const config = statusConfig[status];
@@ -253,57 +321,66 @@ export default function SearchPage() {
                       }`}
                     />
 
-                    {/* Cover image */}
-                    <div className="relative aspect-[3/4] w-full overflow-hidden bg-terminal-bg">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={manga.coverImage}
-                        alt={manga.title}
-                        className="h-full w-full object-cover contrast-[1.15] saturate-[0.65] opacity-85 group-hover:opacity-95 transition-opacity"
-                      />
-                      {/* Scanline overlay */}
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0"
-                        style={{
-                          background:
-                            "repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 1px, transparent 1px, transparent 2px)",
-                        }}
-                      />
-                      {/* Rating badge */}
-                      {manga.rating > 0 && (
-                        <div className="absolute top-1 right-1 bg-terminal-bg/80 px-1.5 py-0.5 text-[0.6rem] font-mono text-terminal-orange">
-                          ★ {manga.rating}
+                    <Link
+                      href={`/manhwa/${media.id}`}
+                      className="flex flex-col flex-1"
+                    >
+                      {/* Cover image */}
+                      <div className="relative aspect-[3/4] w-full overflow-hidden bg-terminal-bg">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={manga.coverImage}
+                          alt={manga.title}
+                          className="h-full w-full object-cover contrast-[1.15] saturate-[0.65] opacity-85 group-hover:opacity-95 transition-opacity"
+                        />
+                        {/* Scanline overlay */}
+                        <div
+                          aria-hidden="true"
+                          className="pointer-events-none absolute inset-0"
+                          style={{
+                            background:
+                              "repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0px, rgba(0,0,0,0.25) 1px, transparent 1px, transparent 2px)",
+                          }}
+                        />
+                        {/* Rating badge */}
+                        {manga.rating > 0 && (
+                          <div className="absolute top-1 right-1 bg-terminal-bg/80 px-1.5 py-0.5 text-[0.6rem] font-mono text-terminal-orange">
+                            ★ {manga.rating}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info area */}
+                      <div className="flex flex-col gap-1 px-2 py-2 text-xs">
+                        <div className="flex items-start gap-1">
+                          <span className="text-terminal-dim shrink-0">
+                            {">"}
+                          </span>
+                          <span
+                            className={`${onShelf ? "text-terminal-green" : config.textClass} line-clamp-1 font-medium leading-tight`}
+                          >
+                            {manga.title}
+                          </span>
                         </div>
-                      )}
-                    </div>
+                        <div className="text-terminal-dim text-[0.6rem] line-clamp-1 pl-3">
+                          {manga.author}
+                        </div>
 
-                    {/* Info area */}
-                    <div className="flex flex-col gap-1 px-2 py-2 text-xs">
-                      <div className="flex items-start gap-1">
-                        <span className="text-terminal-dim shrink-0">{">"}</span>
-                        <span className={`${onShelf ? "text-terminal-green" : config.textClass} line-clamp-1 font-medium leading-tight`}>
-                          {manga.title}
-                        </span>
-                      </div>
-                      <div className="text-terminal-dim text-[0.6rem] line-clamp-1 pl-3">
-                        {manga.author}
-                      </div>
+                        <div className="mt-1">
+                          <ProgressDisplay manga={manga} />
+                        </div>
 
-                      <div className="mt-1">
-                        <ProgressDisplay manga={manga} />
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={status} />
+                          <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
+                            {chaptersStr} ch
+                          </span>
+                        </div>
+                        <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
+                          {manga.sizeOnDisk}
+                        </div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={status} />
-                        <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
-                          {chaptersStr} ch
-                        </span>
-                      </div>
-                      <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
-                        {manga.sizeOnDisk}
-                      </div>
-                    </div>
+                    </Link>
 
                     {/* Add/On Shelf button — visible on hover */}
                     <button
@@ -317,13 +394,11 @@ export default function SearchPage() {
                     >
                       {onShelf ? (
                         <>
-                          <Check className="h-3 w-3" />
-                          [ ON SHELF ]
+                          <Check className="h-3 w-3" />[ ON SHELF ]
                         </>
                       ) : (
                         <>
-                          <Plus className="h-3 w-3" />
-                          [ + ADD ]
+                          <Plus className="h-3 w-3" />[ ADD ]
                         </>
                       )}
                     </button>
@@ -340,23 +415,36 @@ export default function SearchPage() {
             <span>
               <span className="text-terminal-dim">[</span>
               <span className="text-terminal-green">DB</span>
-              <span className="text-terminal-dim">]</span>
-              {" "}anilist-proxy active
+              <span className="text-terminal-dim">]</span> anilist-proxy active
               <span className="mx-2">|</span>
               source: api.anilist.co
               <span className="mx-2">|</span>
-              {hasSearched
-                ? <span className="text-terminal-green">{results.length} records in view</span>
-                : <span>no query executed</span>}
+              {hasSearched ? (
+                <span className="text-terminal-green">
+                  {results.length} records in view
+                </span>
+              ) : (
+                <span>no query executed</span>
+              )}
             </span>
             <span>
-              {isLoading && <span className="text-terminal-orange animate-pulse">executing...</span>}
-              {!isLoading && hasSearched && queryMs !== null && <span>last query: {queryMs}ms</span>}
-              {!isLoading && !hasSearched && <span>status: idle<span className="blink-cursor text-terminal-green">_</span></span>}
+              {isLoading && (
+                <span className="text-terminal-orange animate-pulse">
+                  executing...
+                </span>
+              )}
+              {!isLoading && hasSearched && queryMs !== null && (
+                <span>last query: {queryMs}ms</span>
+              )}
+              {!isLoading && !hasSearched && (
+                <span>
+                  status: idle
+                  <span className="blink-cursor text-terminal-green">_</span>
+                </span>
+              )}
             </span>
           </div>
         </div>
-
       </div>
     </div>
   );
