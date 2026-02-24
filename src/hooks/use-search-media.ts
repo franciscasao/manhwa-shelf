@@ -9,6 +9,7 @@ export function useSearchMedia(
   query: string,
   origin: SearchOrigin,
   page: number,
+  isAdult: boolean = false,
 ) {
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const loadStartRef = useRef<number | null>(null);
@@ -25,11 +26,11 @@ export function useSearchMedia(
   const enabled = trimmed.length >= 2;
 
   const result = useQuery<SearchResult>({
-    queryKey: ["searchMedia", trimmed, origin, page],
+    queryKey: ["searchMedia", trimmed, origin, page, isAdult],
     queryFn: async () => {
       loadStartRef.current = Date.now();
       setQueryMs(null);
-      const data = await searchMedia(trimmed, origin, page);
+      const data = await searchMedia(trimmed, origin, page, 20, isAdult);
       setQueryMs(Date.now() - (loadStartRef.current ?? Date.now()));
       loadStartRef.current = null;
       return data;

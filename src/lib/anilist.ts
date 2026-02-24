@@ -18,6 +18,7 @@ export interface AniListMedia {
     nodes: { name: { full: string } }[];
     edges: { role: string; node: { name: { full: string } } }[];
   };
+  isAdult: boolean;
 }
 
 export interface AniListExternalLink {
@@ -68,10 +69,10 @@ export interface SearchResult {
 }
 
 const SEARCH_QUERY = `
-  query SearchMedia($search: String!, $countryOfOrigin: CountryCode, $page: Int, $perPage: Int) {
+  query SearchMedia($search: String!, $countryOfOrigin: CountryCode, $page: Int, $perPage: Int, $isAdult: Boolean) {
     Page(page: $page, perPage: $perPage) {
       pageInfo { currentPage lastPage hasNextPage total }
-      media(search: $search, format: MANGA, countryOfOrigin: $countryOfOrigin, sort: SEARCH_MATCH) {
+      media(search: $search, format: MANGA, countryOfOrigin: $countryOfOrigin, isAdult: $isAdult, sort: SEARCH_MATCH) {
         id
         title { english romaji }
         coverImage { large }
@@ -79,6 +80,7 @@ const SEARCH_QUERY = `
         genres
         averageScore
         chapters
+        isAdult
         staff(sort: RELEVANCE) {
           nodes { name { full } }
           edges { role node { name { full } } }
@@ -93,8 +95,9 @@ export async function searchMedia(
   origin: SearchOrigin = "KR",
   page = 1,
   perPage = 20,
+  isAdult = false,
 ): Promise<SearchResult> {
-  const variables: Record<string, unknown> = { search: query, page, perPage };
+  const variables: Record<string, unknown> = { search: query, page, perPage, isAdult };
   if (origin !== "ALL") {
     variables.countryOfOrigin = origin;
   }

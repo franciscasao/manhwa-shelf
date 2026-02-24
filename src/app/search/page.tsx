@@ -13,6 +13,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [origin, setOrigin] = useState<SearchOrigin>("KR");
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAdult, setShowAdult] = useState(false);
   const { addToShelf, isOnShelf } = useShelf();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -21,7 +22,7 @@ export default function SearchPage() {
   );
 
   const { results, pageInfo, isLoading, error, hasSearched, queryMs } =
-    useSearchMedia(query, origin, currentPage);
+    useSearchMedia(query, origin, currentPage, showAdult);
 
   const originLabel =
     origin === "KR" ? "MANHWA" : origin === "JP" ? "MANGA" : "MANGA/MANHWA";
@@ -38,6 +39,11 @@ export default function SearchPage() {
 
   const handleOriginChange = (value: SearchOrigin) => {
     setOrigin(value);
+    setCurrentPage(1);
+  };
+
+  const handleToggleAdult = () => {
+    setShowAdult((prev) => !prev);
     setCurrentPage(1);
   };
 
@@ -115,6 +121,17 @@ export default function SearchPage() {
             }`}
           >
             --manga (JP)
+          </button>
+          <span className="mx-1 text-terminal-border">|</span>
+          <button
+            onClick={handleToggleAdult}
+            className={`border px-3 py-1 text-xs font-mono transition-colors ${
+              showAdult
+                ? "border-terminal-orange bg-terminal-orange/10 text-terminal-orange"
+                : "border-terminal-border text-terminal-dim hover:text-terminal-muted"
+            }`}
+          >
+            --nsfw
           </button>
         </div>
 
