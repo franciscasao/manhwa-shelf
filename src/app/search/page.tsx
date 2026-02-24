@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { mapAniListToManga } from "@/lib/anilist";
 import { SearchOrigin } from "@/lib/types";
 import { useShelf } from "@/hooks/use-shelf";
@@ -9,11 +10,28 @@ import { Plus, Check } from "lucide-react";
 import { MangaTerminalCard } from "@/components/manga-terminal-card";
 import { TerminalPagination } from "@/components/terminal-pagination";
 
+const VALID_ORIGINS: SearchOrigin[] = ["KR", "JP", "ALL"];
+
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [origin, setOrigin] = useState<SearchOrigin>("KR");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showAdult, setShowAdult] = useState(false);
+  const searchParams = useSearchParams();
+
+  const [query, setQuery] = useState(
+    () => searchParams.get("q") ?? "",
+  );
+  const [origin, setOrigin] = useState<SearchOrigin>(() => {
+    const param = searchParams.get("origin");
+    return param && VALID_ORIGINS.includes(param as SearchOrigin)
+      ? (param as SearchOrigin)
+      : "KR";
+  });
+  const [currentPage, setCurrentPage] = useState(() => {
+    const param = searchParams.get("page");
+    const n = param ? parseInt(param, 10) : 1;
+    return n >= 1 ? n : 1;
+  });
+  const [showAdult, setShowAdult] = useState(
+    () => searchParams.get("nsfw") === "1",
+  );
   const { addToShelf, isOnShelf } = useShelf();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +48,18 @@ export default function SearchPage() {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Sync state → URL query params (replaceState avoids history pollution)
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (origin !== "KR") params.set("origin", origin);
+    if (currentPage > 1) params.set("page", String(currentPage));
+    if (showAdult) params.set("nsfw", "1");
+    const qs = params.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [query, origin, currentPage, showAdult]);
 
   // Reset to page 1 when query or origin changes
   const handleQueryChange = (value: string) => {
