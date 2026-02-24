@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Manga } from "@/lib/types";
 import { getDownloadStatus, statusConfig } from "@/lib/manga-utils";
 import { StatusBadge } from "@/components/status-badge";
@@ -68,11 +69,12 @@ export function MangaTable({ manga }: { manga: Manga[] }) {
                   <div
                     className={`relative h-[38px] w-[28px] shrink-0 overflow-hidden border ${config.borderClass} bg-terminal-bg`}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={m.coverImage}
                       alt={m.title}
-                      className={`h-full w-full object-cover contrast-[1.2] saturate-[0.6] ${
+                      fill
+                      sizes="28px"
+                      className={`object-cover contrast-[1.2] saturate-[0.6] ${
                         status === "not-downloaded"
                           ? "opacity-30"
                           : "opacity-85"

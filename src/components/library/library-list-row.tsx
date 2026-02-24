@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { Manga } from "@/lib/types";
@@ -32,11 +33,12 @@ export function LibraryListRow({ manga, index, onRemove }: LibraryListRowProps) 
       <Link href={`/manhwa/${manga.id}`} className="flex items-center gap-3 flex-1 min-w-0">
         {/* Mini cover */}
         <div className="relative h-[42px] w-[30px] shrink-0 overflow-hidden bg-terminal-bg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={manga.coverImage}
             alt={manga.title}
-            className={`h-full w-full object-cover contrast-[1.15] saturate-[0.65] ${
+            fill
+            sizes="30px"
+            className={`object-cover contrast-[1.15] saturate-[0.65] ${
               isGhost ? "opacity-30 grayscale" : "opacity-85"
             }`}
           />

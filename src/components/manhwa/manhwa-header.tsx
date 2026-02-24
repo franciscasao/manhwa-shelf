@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { AniListMediaDetail } from "@/lib/anilist";
 import { Manga } from "@/lib/types";
 import { StatusBadge } from "@/components/status-badge";
@@ -24,11 +25,12 @@ export function ManhwaHeader({ media, shelfEntry, onAdd, onRemove }: ManhwaHeade
       {/* Cover */}
       <div className="relative w-[200px] md:w-[250px] shrink-0 self-center md:self-start">
         <div className="relative aspect-[3/4] overflow-hidden border border-terminal-border/60">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={media.coverImage.large}
             alt={title}
-            className="h-full w-full object-cover contrast-[1.15] saturate-[0.65] opacity-85"
+            fill
+            sizes="(max-width: 768px) 200px, 250px"
+            className="object-cover contrast-[1.15] saturate-[0.65] opacity-85"
           />
           <div
             aria-hidden="true"
