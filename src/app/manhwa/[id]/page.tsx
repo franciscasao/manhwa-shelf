@@ -7,6 +7,7 @@ import { findWebtoonLink } from "@/lib/webtoon";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
 import { useWebtoonEpisodes } from "@/hooks/use-webtoon-episodes";
+import { useChapterDownload } from "@/hooks/use-chapter-download";
 import { ArrowLeft } from "lucide-react";
 import { ManhwaHeader } from "@/components/manhwa/manhwa-header";
 import { ManhwaMetadata } from "@/components/manhwa/manhwa-metadata";
@@ -31,6 +32,17 @@ export default function ManhwaDetailPage() {
     error: webtoonError,
     refetch: webtoonRefetch,
   } = useWebtoonEpisodes(webtoonParams);
+
+  const mangaTitle = media?.title?.english || media?.title?.romaji || "Unknown";
+  const {
+    queue,
+    currentProgress,
+    downloadedChapters,
+    enqueueChapter,
+    enqueueMany,
+    cancelQueue,
+    isDownloading,
+  } = useChapterDownload(String(id), mangaTitle);
 
   const bootLines = useRef([
     "> initializing file inspector...",
@@ -137,6 +149,14 @@ export default function ManhwaDetailPage() {
                 webtoonError={webtoonError}
                 webtoonUrl={webtoonParams?.url}
                 onRefetch={webtoonRefetch}
+                mangaId={String(id)}
+                currentProgress={currentProgress}
+                downloadedChapters={downloadedChapters}
+                queueLength={queue.length}
+                isDownloading={isDownloading}
+                onDownloadChapter={enqueueChapter}
+                onDownloadAll={enqueueMany}
+                onCancelDownload={cancelQueue}
               />
             </div>
 
