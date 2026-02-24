@@ -1,7 +1,7 @@
 import type { DownloadStreamEvent } from "@/lib/types";
 
 export interface DownloadResult {
-  path: string;
+  recordId: string;
   sizeBytes: number;
 }
 
@@ -10,13 +10,15 @@ export async function downloadChapterToServer(
   mangaTitle: string,
   chapterNum: number,
   viewerUrl: string,
+  episodeTitle: string,
   onProgress?: (downloaded: number, total: number) => void,
+  onUploading?: () => void,
   signal?: AbortSignal,
 ): Promise<DownloadResult> {
   const res = await fetch("/api/webtoon/download", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mangaId, mangaTitle, chapterNum, viewerUrl }),
+    body: JSON.stringify({ mangaId, mangaTitle, chapterNum, viewerUrl, episodeTitle }),
     signal,
   });
 
@@ -53,8 +55,11 @@ export async function downloadChapterToServer(
         case "progress":
           onProgress?.(event.downloaded, event.total);
           break;
+        case "uploading":
+          onUploading?.();
+          break;
         case "complete":
-          result = { path: event.path, sizeBytes: event.sizeBytes };
+          result = { recordId: event.recordId, sizeBytes: event.sizeBytes };
           break;
         case "error":
           throw new Error(event.message);

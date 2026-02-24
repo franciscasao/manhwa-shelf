@@ -54,6 +54,15 @@ function getChapterStatus(
         statusLabel: `${imagesDownloaded}/${imagesTotal}`,
       };
     }
+    if (state === "uploading") {
+      return {
+        status: "UPLOAD" as const,
+        colorClass: "text-terminal-cyan",
+        bar: "\u2588".repeat(7) + "\u2593",
+        perm: "drwxr-xr-x",
+        statusLabel: "UPLOAD",
+      };
+    }
     if (state === "error") {
       return {
         status: "ERR" as const,
@@ -224,6 +233,7 @@ export function ChapterDirectory({
                     {currentProgress.state === "downloading" &&
                       ` [${currentProgress.imagesDownloaded}/${currentProgress.imagesTotal}]`}
                     {currentProgress.state === "fetching-pages" && " [scanning]"}
+                    {currentProgress.state === "uploading" && " [uploading to db]"}
                   </span>
                 )}
                 {(queueLength ?? 0) > 1 && (

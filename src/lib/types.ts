@@ -1,6 +1,6 @@
 export type DownloadStatus = "complete" | "partial" | "queued" | "not-downloaded";
 
-export type ChapterDownloadState = "idle" | "fetching-pages" | "downloading" | "zipping" | "complete" | "error";
+export type ChapterDownloadState = "idle" | "fetching-pages" | "downloading" | "zipping" | "uploading" | "complete" | "error";
 
 export interface ChapterProgress {
   chapterNum: number;
@@ -20,7 +20,8 @@ export interface DownloadQueueItem {
 export type DownloadStreamEvent =
   | { type: "pages"; total: number }
   | { type: "progress"; downloaded: number; total: number }
-  | { type: "complete"; path: string; sizeBytes: number }
+  | { type: "uploading" }
+  | { type: "complete"; recordId: string; sizeBytes: number }
   | { type: "error"; message: string };
 
 export type MangaOrigin = "JP" | "KR";

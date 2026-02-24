@@ -92,11 +92,12 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
         setCurrentProgress({ ...progress });
 
         try {
-          const result = await downloadChapterToServer(
+          await downloadChapterToServer(
             mangaId,
             mangaTitle,
             item.chapterNum,
             item.viewerLink,
+            item.episodeTitle,
             (downloaded, total) => {
               if (controller.signal.aborted) return;
               setCurrentProgress({
@@ -106,36 +107,19 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
                 imagesTotal: total,
               });
             },
+            () => {
+              if (controller.signal.aborted) return;
+              setCurrentProgress({
+                chapterNum: item.chapterNum,
+                state: "uploading",
+                imagesDownloaded: 0,
+                imagesTotal: 0,
+              });
+            },
             controller.signal,
           );
 
           if (!controller.signal.aborted) {
-            // Persist to PocketBase
-            await pb.collection("chapterDownloads").create({
-              mangaId,
-              chapterNum: item.chapterNum,
-              episodeTitle: item.episodeTitle,
-              filePath: result.path,
-              sizeBytes: result.sizeBytes,
-              downloadedAt: Date.now(),
-            });
-
-            // Update shelf downloaded count
-            const countResult = await pb
-              .collection("chapterDownloads")
-              .getList(1, 1, {
-                filter: `mangaId = "${mangaId}"`,
-                skipTotal: false,
-              });
-
-            try {
-              await pb.collection("shelf").update(mangaId, {
-                "chapters.downloaded": countResult.totalItems,
-              });
-            } catch {
-              // Shelf entry may not exist
-            }
-
             setCurrentProgress({
               chapterNum: item.chapterNum,
               state: "complete",
