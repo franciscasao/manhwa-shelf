@@ -1,4 +1,5 @@
 import { Manga, MangaOrigin, SearchOrigin } from "@/lib/types";
+import { toPocketBaseId } from "@/lib/manga-utils";
 
 export interface AniListMedia {
   id: number;
@@ -204,7 +205,7 @@ export function mapAniListToManga(media: AniListMedia, origin?: MangaOrigin): Ma
     storyEdge?.node.name.full ?? media.staff.nodes[0]?.name.full ?? "Unknown";
 
   return {
-    id: String(media.id),
+    id: toPocketBaseId(media.id),
     title: media.title.english ?? media.title.romaji,
     author,
     coverImage: media.coverImage.large,

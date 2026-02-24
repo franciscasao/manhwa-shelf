@@ -1,5 +1,9 @@
 import { Manga, DownloadStatus } from "@/lib/types";
 
+export function toPocketBaseId(anilistId: number | string): string {
+  return String(anilistId).padStart(15, "0");
+}
+
 export function getDownloadStatus(manga: Manga): DownloadStatus {
   if (manga.chapters.downloaded === 0) return "not-downloaded";
   if (manga.chapters.total && manga.chapters.downloaded >= manga.chapters.total)

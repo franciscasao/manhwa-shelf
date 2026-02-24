@@ -65,11 +65,10 @@ export function useShelf() {
 
   const addToShelf = useCallback(async (manga: Manga) => {
     try {
-      // Try to update existing record first
-      await pb.collection("shelf").update(manga.id, manga);
-    } catch {
-      // If not found, create new
       await pb.collection("shelf").create({ ...manga, id: manga.id });
+    } catch {
+      // If record already exists, update it
+      await pb.collection("shelf").update(manga.id, manga);
     }
   }, []);
 
