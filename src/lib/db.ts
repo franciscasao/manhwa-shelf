@@ -1,6 +1,4 @@
-import Dexie, { type EntityTable, type Table } from "dexie";
-import { Manga } from "@/lib/types";
-import type { WebtoonCache } from "@/lib/webtoon";
+import PocketBase from "pocketbase";
 
 export interface ChapterDownloadRecord {
   mangaId: string;
@@ -11,35 +9,11 @@ export interface ChapterDownloadRecord {
   downloadedAt: number;
 }
 
-const db = new Dexie("manhwa-shelf") as Dexie & {
-  shelf: EntityTable<Manga, "id">;
-  webtoonCache: EntityTable<WebtoonCache, "titleId">;
-  chapterDownloads: Table<ChapterDownloadRecord, [string, number]>;
-};
+const pb = new PocketBase(
+  process.env.NEXT_PUBLIC_POCKETBASE_URL ?? "http://127.0.0.1:8090",
+);
 
-db.version(1).stores({
-  shelf: "id, title, author, rating, lastUpdated",
-});
+// Disable auto-cancellation so concurrent requests don't cancel each other
+pb.autoCancellation(false);
 
-db.version(2).stores({
-  shelf: "id, title, author, rating, lastUpdated, origin",
-}).upgrade(tx => {
-  return tx.table("shelf").toCollection().modify(entry => {
-    if (!entry.origin) {
-      entry.origin = "KR";
-    }
-  });
-});
-
-db.version(3).stores({
-  shelf: "id, title, author, rating, lastUpdated, origin",
-  webtoonCache: "titleId",
-});
-
-db.version(4).stores({
-  shelf: "id, title, author, rating, lastUpdated, origin",
-  webtoonCache: "titleId",
-  chapterDownloads: "[mangaId+chapterNum], mangaId",
-});
-
-export { db };
+export { pb };
