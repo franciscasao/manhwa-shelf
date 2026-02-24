@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { zipSync } from "fflate";
 import {
   fetchWebtoonPage,
   parseImageUrlsFromHtml,
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest) {
         send({ type: "pages", total });
 
         // 2. Download images in batches of 3
-        const imageBuffers: Uint8Array[] = [];
+        const imageData: { buffer: Uint8Array; contentType: string }[] = [];
         const batchSize = 3;
         let downloaded = 0;
 
@@ -65,24 +64,16 @@ export async function POST(request: NextRequest) {
             batch.map((url) => fetchWebtoonImage(url)),
           );
 
-          for (const { buffer } of results) {
-            imageBuffers.push(new Uint8Array(buffer));
+          for (const { buffer, contentType } of results) {
+            imageData.push({ buffer: new Uint8Array(buffer), contentType });
             downloaded++;
             send({ type: "progress", downloaded, total });
           }
         }
 
-        // 3. Create ZIP
-        const files: Record<string, Uint8Array> = {};
-        for (let i = 0; i < imageBuffers.length; i++) {
-          const name = `${String(i + 1).padStart(3, "0")}.jpg`;
-          files[name] = imageBuffers[i];
-        }
+        // 3. Upload individual images to PocketBase
+        const sizeBytes = imageData.reduce((sum, img) => sum + img.buffer.byteLength, 0);
 
-        const zipData = zipSync(files);
-        const sizeBytes = zipData.byteLength;
-
-        // 4. Upload to PocketBase
         send({ type: "uploading" });
 
         const pb = getServerPB();
@@ -96,20 +87,19 @@ export async function POST(request: NextRequest) {
 
         let recordId: string;
 
-        const fileName = `${mangaId}_ch${String(chapterNum).padStart(3, "0")}.cbz`;
-        const cbzBuffer = new ArrayBuffer(zipData.byteLength);
-        new Uint8Array(cbzBuffer).set(zipData);
-        const cbzBlob = new Blob([cbzBuffer], {
-          type: "application/octet-stream",
-        });
-
         const formData = new FormData();
         formData.append("mangaId", mangaId);
         formData.append("chapterNum", String(chapterNum));
         formData.append("episodeTitle", episodeTitle ?? "");
         formData.append("sizeBytes", String(sizeBytes));
         formData.append("downloadedAt", String(Date.now()));
-        formData.append("cbzFile", cbzBlob, fileName);
+
+        for (let i = 0; i < imageData.length; i++) {
+          const { buffer, contentType } = imageData[i];
+          const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+          const fileName = `${String(i + 1).padStart(3, "0")}.${ext}`;
+          formData.append("images", new Blob([buffer.buffer as ArrayBuffer], { type: contentType }), fileName);
+        }
 
         if (existing.totalItems > 0) {
           // Update existing record

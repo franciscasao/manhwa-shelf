@@ -51,7 +51,7 @@ async function main() {
         { name: "mangaId", type: "text", required: true },
         { name: "chapterNum", type: "number" },
         { name: "episodeTitle", type: "text" },
-        { name: "cbzFile", type: "file", maxSelect: 1, maxSize: 104857600 },
+        { name: "images", type: "file", maxSelect: 999, maxSize: 104857600 },
         { name: "sizeBytes", type: "number" },
         { name: "downloadedAt", type: "number" },
       ],

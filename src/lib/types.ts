@@ -1,6 +1,6 @@
 export type DownloadStatus = "complete" | "partial" | "queued" | "not-downloaded";
 
-export type ChapterDownloadState = "idle" | "fetching-pages" | "downloading" | "zipping" | "uploading" | "complete" | "error";
+export type ChapterDownloadState = "idle" | "fetching-pages" | "downloading" | "uploading" | "complete" | "error";
 
 export interface ChapterProgress {
   chapterNum: number;

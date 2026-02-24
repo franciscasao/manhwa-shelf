@@ -4,7 +4,7 @@ export interface ChapterDownloadRecord {
   mangaId: string;
   chapterNum: number;
   episodeTitle: string;
-  cbzFile: string;
+  images: string[];
   sizeBytes: number;
   downloadedAt: number;
 }
