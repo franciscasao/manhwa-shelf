@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { mapAniListToManga } from "@/lib/anilist";
 import { SearchOrigin } from "@/lib/types";
@@ -13,6 +13,20 @@ import { TerminalPagination } from "@/components/terminal-pagination";
 const VALID_ORIGINS: SearchOrigin[] = ["KR", "JP", "ALL"];
 
 export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="font-mono min-h-screen bg-terminal-bg text-terminal-green px-3 py-10 text-xs">
+          {">"} initializing search interface<span className="blink-cursor">_</span>
+        </div>
+      }
+    >
+      <SearchPageInner />
+    </Suspense>
+  );
+}
+
+function SearchPageInner() {
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState(
