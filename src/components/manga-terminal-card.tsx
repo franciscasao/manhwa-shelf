@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Manga } from "@/lib/types";
 import { getDownloadStatus, statusConfig } from "@/lib/manga-utils";
@@ -45,11 +46,12 @@ export function MangaTerminalCard({
       <Link href={`/manhwa/${manga.id}`} className="flex flex-col flex-1">
         {/* Cover image */}
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-terminal-bg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={manga.coverImage}
             alt={manga.title}
-            className={`h-full w-full object-cover contrast-[1.15] saturate-[0.65] ${
+            fill
+            sizes="(max-width: 768px) 50vw, 200px"
+            className={`object-cover contrast-[1.15] saturate-[0.65] ${
               isGhost
                 ? "opacity-30 grayscale"
                 : "opacity-85 group-hover:opacity-95"

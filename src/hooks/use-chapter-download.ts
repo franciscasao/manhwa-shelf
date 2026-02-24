@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
-import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/lib/db";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { pb } from "@/lib/db";
 import { downloadChapterToServer } from "@/lib/chapter-download";
 import type {
   ChapterDownloadState,
@@ -15,11 +14,51 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
   const [currentProgress, setCurrentProgress] = useState<ChapterProgress | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const processingRef = useRef(false);
+  const [downloadRecords, setDownloadRecords] = useState<
+    { chapterNum: number }[] | undefined
+  >(undefined);
 
-  const downloadRecords = useLiveQuery(
-    () => db.chapterDownloads.where("mangaId").equals(mangaId).toArray(),
-    [mangaId],
-  );
+  useEffect(() => {
+    let cancelled = false;
+
+    pb.collection("chapterDownloads")
+      .getFullList({ filter: `mangaId = "${mangaId}"` })
+      .then((records) => {
+        if (!cancelled) {
+          setDownloadRecords(
+            records.map((r) => ({ chapterNum: r["chapterNum"] as number })),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDownloadRecords([]);
+      });
+
+    pb.collection("chapterDownloads").subscribe("*", (e) => {
+      if (
+        (e.record["mangaId"] as string) !== mangaId
+      )
+        return;
+
+      setDownloadRecords((prev) => {
+        const current = prev ?? [];
+        if (e.action === "create") {
+          return [...current, { chapterNum: e.record["chapterNum"] as number }];
+        }
+        if (e.action === "delete") {
+          return current.filter(
+            (r) => r.chapterNum !== (e.record["chapterNum"] as number),
+          );
+        }
+        return current;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      pb.collection("chapterDownloads").unsubscribe("*");
+    };
+  }, [mangaId]);
 
   const downloadedChapters = useMemo(() => {
     const set = new Set<number>();
@@ -71,8 +110,8 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
           );
 
           if (!controller.signal.aborted) {
-            // Persist to Dexie
-            await db.chapterDownloads.put({
+            // Persist to PocketBase
+            await pb.collection("chapterDownloads").create({
               mangaId,
               chapterNum: item.chapterNum,
               episodeTitle: item.episodeTitle,
@@ -82,15 +121,20 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
             });
 
             // Update shelf downloaded count
-            const count = await db.chapterDownloads
-              .where("mangaId")
-              .equals(mangaId)
-              .count();
+            const countResult = await pb
+              .collection("chapterDownloads")
+              .getList(1, 1, {
+                filter: `mangaId = "${mangaId}"`,
+                skipTotal: false,
+              });
 
-            await db.shelf
-              .where("id")
-              .equals(mangaId)
-              .modify({ "chapters.downloaded": count });
+            try {
+              await pb.collection("shelf").update(mangaId, {
+                "chapters.downloaded": countResult.totalItems,
+              });
+            } catch {
+              // Shelf entry may not exist
+            }
 
             setCurrentProgress({
               chapterNum: item.chapterNum,

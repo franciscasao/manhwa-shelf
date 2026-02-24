@@ -21,14 +21,14 @@ export function useWebtoonEpisodes(params: WebtoonParams | null) {
     queryFn: async () => {
       const { titleId, type } = params!;
 
-      // Check Dexie cache first
+      // Check PocketBase cache first
       const cached = await getWebtoonCache(titleId);
       if (cached) return cached.episodes;
 
       // Fetch from API
       const episodes = await fetchWebtoonEpisodes(titleId, type);
 
-      // Save to Dexie
+      // Save to PocketBase
       await saveWebtoonCache(titleId, type, episodes);
 
       return episodes;

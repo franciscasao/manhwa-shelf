@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { mapAniListToManga } from "@/lib/anilist";
+import { toPocketBaseId } from "@/lib/manga-utils";
 import { findWebtoonLink } from "@/lib/webtoon";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
@@ -42,7 +43,7 @@ export default function ManhwaDetailPage() {
     enqueueMany,
     cancelQueue,
     isDownloading,
-  } = useChapterDownload(String(id), mangaTitle);
+  } = useChapterDownload(toPocketBaseId(id), mangaTitle);
 
   const bootLines = useRef([
     "> initializing file inspector...",
@@ -51,7 +52,7 @@ export default function ManhwaDetailPage() {
     "> resolving metadata...",
   ]);
 
-  const shelfEntry = shelf.find((m) => m.id === String(id));
+  const shelfEntry = shelf.find((m) => m.id === toPocketBaseId(id));
 
   const handleAdd = () => {
     if (!media) return;
@@ -60,7 +61,7 @@ export default function ManhwaDetailPage() {
   };
 
   const handleRemove = () => {
-    removeFromShelf(String(id));
+    removeFromShelf(toPocketBaseId(id));
   };
 
   return (
@@ -143,13 +144,13 @@ export default function ManhwaDetailPage() {
               <ChapterDirectory
                 totalChapters={media.chapters}
                 downloaded={shelfEntry?.chapters.downloaded ?? 0}
-                isOnShelf={isOnShelf(String(id))}
+                isOnShelf={isOnShelf(toPocketBaseId(id))}
                 webtoonEpisodes={webtoonEpisodes}
                 webtoonLoading={webtoonLoading}
                 webtoonError={webtoonError}
                 webtoonUrl={webtoonParams?.url}
                 onRefetch={webtoonRefetch}
-                mangaId={String(id)}
+                mangaId={toPocketBaseId(id)}
                 currentProgress={currentProgress}
                 downloadedChapters={downloadedChapters}
                 queueLength={queue.length}
@@ -174,7 +175,7 @@ export default function ManhwaDetailPage() {
               <span className="mx-2">|</span>
               source: anilist
               <span className="mx-2">|</span>
-              {isOnShelf(String(id))
+              {isOnShelf(toPocketBaseId(id))
                 ? <span className="text-terminal-green">on shelf</span>
                 : <span>not on shelf</span>
               }

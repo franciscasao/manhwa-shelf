@@ -1,5 +1,5 @@
 import type { AniListExternalLink } from "@/lib/anilist";
-import { db } from "@/lib/db";
+import { pb } from "@/lib/db";
 
 export interface WebtoonCache {
   titleId: string;
@@ -77,7 +77,19 @@ export async function fetchWebtoonEpisodes(
 export async function getWebtoonCache(
   titleId: string,
 ): Promise<WebtoonCache | undefined> {
-  return db.webtoonCache.get(titleId);
+  try {
+    const record = await pb
+      .collection("webtoonCache")
+      .getFirstListItem(`titleId = "${titleId}"`);
+    return {
+      titleId: record["titleId"] as string,
+      type: record["type"] as WebtoonType,
+      episodes: record["episodes"] as WebtoonEpisode[],
+      fetchedAt: record["fetchedAt"] as number,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 export async function saveWebtoonCache(
@@ -85,9 +97,29 @@ export async function saveWebtoonCache(
   type: WebtoonType,
   episodes: WebtoonEpisode[],
 ): Promise<void> {
-  await db.webtoonCache.put({ titleId, type, episodes, fetchedAt: Date.now() });
+  try {
+    const existing = await pb
+      .collection("webtoonCache")
+      .getFirstListItem(`titleId = "${titleId}"`);
+    await pb.collection("webtoonCache").update(existing.id, {
+      type,
+      episodes,
+      fetchedAt: Date.now(),
+    });
+  } catch {
+    await pb
+      .collection("webtoonCache")
+      .create({ titleId, type, episodes, fetchedAt: Date.now() });
+  }
 }
 
 export async function clearWebtoonCache(titleId: string): Promise<void> {
-  await db.webtoonCache.delete(titleId);
+  try {
+    const existing = await pb
+      .collection("webtoonCache")
+      .getFirstListItem(`titleId = "${titleId}"`);
+    await pb.collection("webtoonCache").delete(existing.id);
+  } catch {
+    // Cache entry doesn't exist, nothing to clear
+  }
 }
