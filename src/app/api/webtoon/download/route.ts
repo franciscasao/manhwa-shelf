@@ -115,17 +115,37 @@ export async function POST(request: NextRequest) {
           recordId = record.id;
         }
 
-        // 5. Update shelf downloaded count
-        const countResult = await pb
-          .collection("chapterDownloads")
-          .getList(1, 1, {
-            filter: `mangaId = "${mangaId}"`,
-            skipTotal: false,
-          });
-
+        // 5. Update shelf downloaded count and size
         try {
+          const allChapters = await pb
+            .collection("chapterDownloads")
+            .getFullList({
+              filter: `mangaId = "${mangaId}"`,
+              fields: "sizeBytes",
+            });
+
+          const totalChapters = allChapters.length;
+          const totalBytes = allChapters.reduce(
+            (sum, ch) => sum + (ch.sizeBytes || 0),
+            0,
+          );
+          const formattedSize =
+            totalBytes >= 1024 * 1024 * 1024
+              ? `${(totalBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+              : `${(totalBytes / (1024 * 1024)).toFixed(2)} MB`;
+
+          const shelfRecord = await pb.collection("shelf").getOne(mangaId);
+          const existingChapters = shelfRecord.chapters as {
+            downloaded: number;
+            total: number | null;
+          };
+
           await pb.collection("shelf").update(mangaId, {
-            "chapters.downloaded": countResult.totalItems,
+            chapters: {
+              downloaded: totalChapters,
+              total: existingChapters?.total ?? null,
+            },
+            sizeOnDisk: formattedSize,
           });
         } catch {
           // Shelf entry may not exist
