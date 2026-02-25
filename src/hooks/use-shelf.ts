@@ -76,6 +76,17 @@ export function useShelf() {
     await pb.collection("shelf").delete(id);
   }, []);
 
+  const updateChaptersTotal = useCallback(
+    async (id: string, total: number) => {
+      const entry = shelf?.find((m) => m.id === id);
+      if (!entry || entry.chapters.total === total) return;
+      await pb.collection("shelf").update(id, {
+        chapters: { ...entry.chapters, total },
+      });
+    },
+    [shelf],
+  );
+
   const isOnShelf = useCallback(
     (id: string): boolean => {
       return shelf?.some((m) => m.id === id) ?? false;
@@ -89,5 +100,6 @@ export function useShelf() {
     addToShelf,
     removeFromShelf,
     isOnShelf,
+    updateChaptersTotal,
   };
 }
