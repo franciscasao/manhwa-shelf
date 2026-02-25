@@ -17,12 +17,18 @@ export const WEBTOON_IMAGE_DOMAINS = [
 ];
 
 export function parseImageUrlsFromHtml(html: string): string[] {
-  const imageRegex = /<img[^>]+data-url="([^"]+)"[^>]*>/g;
-  const images: string[] = [];
-  let match;
+  const imgTagRegex = /<img[^>]+>/gi;
+  const contentImages: string[] = [];
+  const allDataUrlImages: string[] = [];
+  let imgMatch;
 
-  while ((match = imageRegex.exec(html)) !== null) {
-    let url = match[1];
+  while ((imgMatch = imgTagRegex.exec(html)) !== null) {
+    const tag = imgMatch[0];
+
+    const dataUrlMatch = tag.match(/data-url="([^"]+)"/);
+    if (!dataUrlMatch) continue;
+
+    let url = dataUrlMatch[1];
     try {
       const imgUrl = new URL(url);
       imgUrl.searchParams.delete("type");
@@ -30,10 +36,19 @@ export function parseImageUrlsFromHtml(html: string): string[] {
     } catch {
       // Use URL as-is if parsing fails
     }
-    images.push(url);
+
+    allDataUrlImages.push(url);
+
+    // Viewer content images have class="_images"; thumbnails and other
+    // page images (episode list, banners, etc.) do not.
+    if (/class="[^"]*\b_images\b/.test(tag)) {
+      contentImages.push(url);
+    }
   }
 
-  return images;
+  // Prefer the filtered content images; fall back to all data-url images
+  // if the page structure doesn't use the _images class (future-proofing).
+  return contentImages.length > 0 ? contentImages : allDataUrlImages;
 }
 
 export function resolveViewerUrl(viewerUrl: string): string {

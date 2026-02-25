@@ -86,16 +86,6 @@ export default function ChapterReaderPage() {
 
   return (
     <div className="font-mono min-h-screen bg-terminal-bg text-terminal-green">
-      {/* CRT scanline overlay */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 z-50"
-        style={{
-          background:
-            "repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px)",
-        }}
-      />
-
       {/* Loading state */}
       {isLoading && (
         <div className="relative z-10 mx-auto max-w-[900px] px-3 py-10">
