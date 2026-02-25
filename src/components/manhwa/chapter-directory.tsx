@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { WebtoonEpisode } from "@/lib/webtoon";
 import type { ChapterProgress, DownloadQueueItem } from "@/lib/types";
 
@@ -14,6 +15,7 @@ interface ChapterDirectoryProps {
   webtoonUrl?: string;
   onRefetch?: () => void;
   mangaId?: string;
+  anilistId?: number;
   currentProgress?: ChapterProgress | null;
   downloadedChapters?: Set<number>;
   queueLength?: number;
@@ -153,6 +155,7 @@ export function ChapterDirectory({
   webtoonUrl,
   onRefetch,
   mangaId,
+  anilistId,
   currentProgress,
   downloadedChapters,
   queueLength,
@@ -283,16 +286,17 @@ export function ChapterDirectory({
               currentProgress,
             );
 
+            const isChapterDownloaded = downloadedChapters?.has(chapterNum);
             const canDownload =
               mangaId &&
               onDownloadChapter &&
               !isDownloading &&
-              !downloadedChapters?.has(chapterNum);
+              !isChapterDownloaded;
 
-            return (
+            const row = (
               <div
                 key={chapterNum}
-                className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed`}
+                className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}
               >
                 <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">
                   {perm}
@@ -305,7 +309,15 @@ export function ChapterDirectory({
                   {bar}
                 </span>
                 <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
-                {canDownload && (
+                {isChapterDownloaded && anilistId ? (
+                  <Link
+                    href={`/manhwa/${anilistId}/read/${chapterNum}`}
+                    className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    [ READ ]
+                  </Link>
+                ) : canDownload ? (
                   <button
                     onClick={() =>
                       onDownloadChapter({
@@ -319,9 +331,18 @@ export function ChapterDirectory({
                   >
                     [ DL ]
                   </button>
-                )}
+                ) : null}
               </div>
             );
+
+            if (isChapterDownloaded && anilistId) {
+              return (
+                <Link key={chapterNum} href={`/manhwa/${anilistId}/read/${chapterNum}`} className="block">
+                  {row}
+                </Link>
+              );
+            }
+            return row;
           })}
         </div>
 
@@ -374,16 +395,36 @@ export function ChapterDirectory({
   const chapters = [];
   for (let i = start; i <= end; i++) {
     const num = String(i).padStart(3, "0");
-    const { colorClass, bar, perm, statusLabel } = getChapterStatus(i, downloaded, isOnShelf);
+    const { colorClass, bar, perm, statusLabel } = getChapterStatus(i, downloaded, isOnShelf, downloadedChapters);
+    const isChapterDownloaded = downloadedChapters?.has(i);
 
-    chapters.push(
-      <div key={i} className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed`}>
+    const row = (
+      <div className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}>
         <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
         <span className="w-[90px] shrink-0">Chapter {num}</span>
         <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
         <span className="shrink-0">{statusLabel}</span>
+        {isChapterDownloaded && anilistId && (
+          <Link
+            href={`/manhwa/${anilistId}/read/${i}`}
+            className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            [ READ ]
+          </Link>
+        )}
       </div>
     );
+
+    if (isChapterDownloaded && anilistId) {
+      chapters.push(
+        <Link key={i} href={`/manhwa/${anilistId}/read/${i}`} className="block">
+          {row}
+        </Link>
+      );
+    } else {
+      chapters.push(<div key={i}>{row}</div>);
+    }
   }
 
   return (

@@ -151,6 +151,7 @@ export default function ManhwaDetailPage() {
                 webtoonUrl={webtoonParams?.url}
                 onRefetch={webtoonRefetch}
                 mangaId={toPocketBaseId(id)}
+                anilistId={id}
                 currentProgress={currentProgress}
                 downloadedChapters={downloadedChapters}
                 queueLength={queue.length}
