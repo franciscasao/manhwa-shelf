@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { mapAniListToManga } from "@/lib/anilist";
 import { toPocketBaseId } from "@/lib/manga-utils";
@@ -24,7 +24,7 @@ export default function ManhwaDetailPage() {
 
   const { media, isLoading, error: fetchError } = useMediaDetail(id);
   const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
-  const { shelf, addToShelf, removeFromShelf, isOnShelf } = useShelf();
+  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
 
   const webtoonParams = media ? findWebtoonLink(media.externalLinks) : null;
   const {
@@ -53,6 +53,15 @@ export default function ManhwaDetailPage() {
   ]);
 
   const shelfEntry = shelf.find((m) => m.id === toPocketBaseId(id));
+
+  // Sync total chapters to shelf after fetching episodes or AniList data
+  const mangaId = toPocketBaseId(id);
+  const resolvedTotal = webtoonEpisodes?.length ?? media?.chapters ?? null;
+  useEffect(() => {
+    if (resolvedTotal && isOnShelf(mangaId)) {
+      updateChaptersTotal(mangaId, resolvedTotal);
+    }
+  }, [resolvedTotal, mangaId, isOnShelf, updateChaptersTotal]);
 
   const handleAdd = () => {
     if (!media) return;
