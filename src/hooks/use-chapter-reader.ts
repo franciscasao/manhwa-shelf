@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 
 interface ChapterData {
   recordId: string;
@@ -59,4 +60,20 @@ export function useChapterReader(mangaId: string, chapterNum: number) {
     isLoading: result.isLoading && result.fetchStatus !== "idle",
     error: result.error?.message ?? null,
   };
+}
+
+/** Prefetch a chapter into React Query cache so navigation is instant */
+export function usePrefetchChapter(mangaId: string, chapterNum: number | null) {
+  const queryClient = useQueryClient();
+
+  const prefetch = useCallback(() => {
+    if (!mangaId || !chapterNum || chapterNum <= 0) return;
+    queryClient.prefetchQuery({
+      queryKey: ["chapterReader", mangaId, chapterNum],
+      queryFn: () => fetchChapter(mangaId, chapterNum),
+      staleTime: Infinity,
+    });
+  }, [queryClient, mangaId, chapterNum]);
+
+  return prefetch;
 }
