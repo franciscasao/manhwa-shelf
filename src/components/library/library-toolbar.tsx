@@ -1,8 +1,5 @@
 import { Search, X, LayoutGrid, List } from "lucide-react";
-
-type FilterValue = "all" | "complete" | "partial" | "not-downloaded";
-type SortValue = "title" | "rating" | "chapters" | "size" | "updated";
-type ViewMode = "grid" | "list";
+import { FilterValue, SortValue, ViewMode } from "@/lib/types";
 
 interface FilterOption {
   value: FilterValue;

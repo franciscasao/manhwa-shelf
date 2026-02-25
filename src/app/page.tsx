@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useShelf } from "@/hooks/use-shelf";
-import { Manga } from "@/lib/types";
-import { getDownloadStatus } from "@/lib/manga-utils";
+import { FilterValue, SortValue, ViewMode } from "@/lib/types";
+import { getDownloadStatus, parseSizeGB, sortManga } from "@/lib/manga-utils";
 import { LibraryStatsBar } from "@/components/library/library-stats-bar";
 import { LibraryToolbar } from "@/components/library/library-toolbar";
 import { LibraryTerminalCard } from "@/components/library/library-terminal-card";
@@ -20,41 +20,6 @@ import {
 } from "@/components/ui/dialog";
 
 const PAGE_SIZE = 20;
-
-type FilterValue = "all" | "complete" | "partial" | "not-downloaded";
-type SortValue = "title" | "rating" | "chapters" | "size" | "updated";
-type ViewMode = "grid" | "list";
-
-function parseSizeGB(sizeStr: string): number {
-  const match = sizeStr.match(/([\d.]+)\s*(GB|MB)/i);
-  if (!match) return 0;
-  const val = parseFloat(match[1]);
-  return match[2].toUpperCase() === "GB" ? val : val / 1024;
-}
-
-function sortManga(manga: Manga[], sortBy: SortValue): Manga[] {
-  const sorted = [...manga];
-  switch (sortBy) {
-    case "title":
-      return sorted.sort((a, b) => a.title.localeCompare(b.title));
-    case "rating":
-      return sorted.sort((a, b) => b.rating - a.rating);
-    case "chapters":
-      return sorted.sort(
-        (a, b) => b.chapters.downloaded - a.chapters.downloaded,
-      );
-    case "size":
-      return sorted.sort(
-        (a, b) => parseSizeGB(b.sizeOnDisk) - parseSizeGB(a.sizeOnDisk),
-      );
-    case "updated":
-      return sorted.sort((a, b) =>
-        (b.lastUpdated || "").localeCompare(a.lastUpdated || ""),
-      );
-    default:
-      return sorted;
-  }
-}
 
 export default function LibraryPage() {
   const { shelf, isHydrated, removeFromShelf } = useShelf();

@@ -24,6 +24,10 @@ export type DownloadStreamEvent =
   | { type: "complete"; recordId: string; sizeBytes: number }
   | { type: "error"; message: string };
 
+export type SortValue = "title" | "rating" | "chapters" | "size" | "updated";
+export type FilterValue = "all" | "complete" | "partial" | "not-downloaded";
+export type ViewMode = "grid" | "list";
+
 export type MangaOrigin = "JP" | "KR";
 export type SearchOrigin = MangaOrigin | "ALL";
 
