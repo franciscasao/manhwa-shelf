@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toPocketBaseId } from "@/lib/manga-utils";
-import { useChapterReader } from "@/hooks/use-chapter-reader";
+import { useChapterReader, usePrefetchChapter } from "@/hooks/use-chapter-reader";
 import { ReaderToolbar } from "@/components/reader/reader-toolbar";
 import { ReaderImageStrip } from "@/components/reader/reader-image-strip";
 import { ReaderBottomNav } from "@/components/reader/reader-bottom-nav";
@@ -16,6 +16,8 @@ export default function ChapterReaderPage() {
   const mangaId = toPocketBaseId(anilistId);
 
   const { chapter, isLoading, error } = useChapterReader(mangaId, chapterNum);
+  const prefetchNext = usePrefetchChapter(mangaId, chapter?.nextChapter ?? null);
+  const hasPrefetchedRef = useRef(false);
 
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -46,11 +48,12 @@ export default function ChapterReaderPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Scroll to top on chapter change
+  // Scroll to top on chapter change and reset prefetch flag
   useEffect(() => {
     window.scrollTo({ top: 0 });
     setProgress(0);
     setToolbarVisible(true);
+    hasPrefetchedRef.current = false;
   }, [chapterNum]);
 
   // Keyboard shortcuts
@@ -69,9 +72,17 @@ export default function ChapterReaderPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [router, anilistId, chapter?.prevChapter, chapter?.nextChapter]);
 
-  const handleProgressChange = useCallback((p: number) => {
-    setProgress(p);
-  }, []);
+  const handleProgressChange = useCallback(
+    (p: number) => {
+      setProgress(p);
+      // Prefetch the next chapter when user reaches 80%
+      if (p >= 80 && !hasPrefetchedRef.current) {
+        hasPrefetchedRef.current = true;
+        prefetchNext();
+      }
+    },
+    [prefetchNext],
+  );
 
   const handleTap = useCallback(() => {
     setToolbarVisible((v) => !v);
@@ -143,6 +154,7 @@ export default function ChapterReaderPage() {
 
           <div className="relative z-10 pt-2">
             <ReaderImageStrip
+              key={chapter.chapterNum}
               imageUrls={chapter.imageUrls}
               onProgressChange={handleProgressChange}
               onTap={handleTap}
