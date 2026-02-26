@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { mapAniListToManga } from "@/lib/anilist";
 import { toPocketBaseId } from "@/lib/manga-utils";
+import type { MangaOrigin } from "@/lib/types";
 import { findWebtoonLink } from "@/lib/webtoon";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
@@ -65,7 +66,7 @@ export default function ManhwaDetailPage() {
 
   const handleAdd = () => {
     if (!media) return;
-    const manga = mapAniListToManga(media, media.countryOfOrigin === "JP" ? "JP" : "KR");
+    const manga = mapAniListToManga(media, (media.countryOfOrigin as MangaOrigin) ?? "KR");
     addToShelf(manga);
   };
 

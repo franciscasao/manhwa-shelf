@@ -1,6 +1,16 @@
-export type DownloadStatus = "complete" | "partial" | "queued" | "not-downloaded";
+export type DownloadStatus =
+  | "complete"
+  | "partial"
+  | "queued"
+  | "not-downloaded";
 
-export type ChapterDownloadState = "idle" | "fetching-pages" | "downloading" | "uploading" | "complete" | "error";
+export type ChapterDownloadState =
+  | "idle"
+  | "fetching-pages"
+  | "downloading"
+  | "uploading"
+  | "complete"
+  | "error";
 
 export interface ChapterProgress {
   chapterNum: number;
@@ -28,7 +38,7 @@ export type SortValue = "title" | "rating" | "chapters" | "size" | "updated";
 export type FilterValue = "all" | "complete" | "partial" | "not-downloaded";
 export type ViewMode = "grid" | "list";
 
-export type MangaOrigin = "JP" | "KR";
+export type MangaOrigin = "JP" | "KR" | "CN" | "TW";
 export type SearchOrigin = MangaOrigin | "ALL";
 
 export type Manga = {

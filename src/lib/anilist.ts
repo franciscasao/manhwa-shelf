@@ -200,7 +200,7 @@ export async function fetchManhwaById(id: number): Promise<AniListMediaDetail> {
 
 export function mapAniListToManga(media: AniListMedia, origin?: MangaOrigin): Manga {
   const resolvedOrigin: MangaOrigin =
-    origin ?? (media.countryOfOrigin === "JP" ? "JP" : "KR");
+    origin ?? (media.countryOfOrigin as MangaOrigin) ?? "KR";
   const storyEdge = media.staff.edges.find(
     (e) => e.role === "Story" || e.role === "Story & Art",
   );

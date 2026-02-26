@@ -36,7 +36,7 @@ async function main() {
         { name: "chapters", type: "json" },
         { name: "sizeOnDisk", type: "text" },
         { name: "lastUpdated", type: "text" },
-        { name: "origin", type: "text" },
+        { name: "origin", type: "select", values: ["KR", "JP", "CN", "TW"] },
       ],
       listRule: "",
       viewRule: "",
