@@ -96,8 +96,9 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
             mangaId,
             mangaTitle,
             item.chapterNum,
-            item.viewerLink,
+            item.chapterUrl,
             item.episodeTitle,
+            item.sourceId,
             (downloaded, total) => {
               if (controller.signal.aborted) return;
               setCurrentProgress({

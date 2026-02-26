@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  WEBTOON_IMAGE_DOMAINS,
-  WEBTOON_IMAGE_HEADERS,
-} from "@/lib/webtoon-scraper";
+import { validateImageDomain } from "@/extensions";
 
 export async function GET(request: NextRequest) {
   const imageUrl = request.nextUrl.searchParams.get("url");
@@ -14,23 +11,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Validate URL domain against allowlist
-  try {
-    const parsed = new URL(imageUrl);
-    if (!WEBTOON_IMAGE_DOMAINS.some((d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`))) {
-      return NextResponse.json(
-        { error: "Image domain not allowed" },
-        { status: 403 },
-      );
-    }
-  } catch {
+  const { valid, source } = validateImageDomain(imageUrl);
+  if (!valid || !source) {
     return NextResponse.json(
-      { error: "Invalid image URL" },
-      { status: 400 },
+      { error: "Image domain not allowed" },
+      { status: 403 },
     );
   }
 
-  const res = await fetch(imageUrl, { headers: WEBTOON_IMAGE_HEADERS });
+  const res = await fetch(imageUrl, { headers: source.imageHeaders });
 
   if (!res.ok) {
     return NextResponse.json(

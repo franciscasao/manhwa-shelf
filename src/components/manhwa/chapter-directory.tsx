@@ -2,17 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { WebtoonEpisode } from "@/lib/webtoon";
+import type { SourceChapter } from "@/extensions";
 import type { ChapterProgress, DownloadQueueItem } from "@/lib/types";
 
 interface ChapterDirectoryProps {
   totalChapters: number | null;
   downloaded: number;
   isOnShelf: boolean;
-  webtoonEpisodes?: WebtoonEpisode[] | null;
-  webtoonLoading?: boolean;
-  webtoonError?: string | null;
-  onRefetch?: () => void;
+  chapters?: SourceChapter[] | null;
+  sourceId?: string;
   mangaId?: string;
   anilistId?: number;
   currentProgress?: ChapterProgress | null;
@@ -154,10 +152,8 @@ export function ChapterDirectory({
   totalChapters,
   downloaded,
   isOnShelf,
-  webtoonEpisodes,
-  webtoonLoading,
-  webtoonError,
-  onRefetch,
+  chapters,
+  sourceId,
   mangaId,
   anilistId,
   currentProgress,
@@ -170,23 +166,11 @@ export function ChapterDirectory({
 }: ChapterDirectoryProps) {
   const [page, setPage] = useState(0);
 
-  const hasWebtoonEpisodes = webtoonEpisodes && webtoonEpisodes.length > 0;
+  const hasChapters = chapters && chapters.length > 0;
 
-  // Webtoon loading state
-  if (webtoonLoading) {
-    return (
-      <div className="border border-terminal-border/40 px-4 py-3">
-        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">--- CHAPTER DIRECTORY ---</div>
-        <div className="text-xs text-terminal-dim">
-          {">"} fetching webtoon episodes<span className="blink-cursor">_</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Webtoon episodes available — render real episode list
-  if (hasWebtoonEpisodes) {
-    const sorted = [...webtoonEpisodes].sort((a, b) => a.exposureDateMillis - b.exposureDateMillis);
+  // Source chapters available — render real episode list
+  if (hasChapters) {
+    const sorted = [...chapters].sort((a, b) => (a.datePublished ?? 0) - (b.datePublished ?? 0));
     const totalEpisodes = sorted.length;
     const totalPages = Math.ceil(totalEpisodes / PER_PAGE);
     const start = page * PER_PAGE;
@@ -194,12 +178,13 @@ export function ChapterDirectory({
     const slice = sorted.slice(start, end);
 
     const handleDownloadAll = () => {
-      if (!mangaId || !onDownloadAll) return;
-      const items: DownloadQueueItem[] = sorted.map((ep, idx) => ({
+      if (!mangaId || !sourceId || !onDownloadAll) return;
+      const items: DownloadQueueItem[] = sorted.map((ch, idx) => ({
         mangaId,
         chapterNum: idx + 1,
-        episodeTitle: ep.episodeTitle,
-        viewerLink: ep.viewerLink,
+        episodeTitle: ch.title,
+        chapterUrl: ch.url,
+        sourceId,
       }));
       onDownloadAll(items);
     };
@@ -209,22 +194,10 @@ export function ChapterDirectory({
         <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">
           --- CHAPTER DIRECTORY --- {totalEpisodes} entries
           {isOnShelf && downloaded > 0 && <span> — {downloaded} cached</span>}
-          <span className="text-terminal-cyan ml-2">via webtoon</span>
-          {onRefetch && (
-            <button
-              onClick={onRefetch}
-              disabled={webtoonLoading}
-              className={`ml-2 ${
-                webtoonLoading ? "text-terminal-dim cursor-not-allowed" : "text-terminal-cyan hover:text-terminal-green"
-              }`}
-            >
-              [ REFETCH ]
-            </button>
-          )}
         </div>
 
         {/* Download controls */}
-        {mangaId && onDownloadAll && (
+        {mangaId && sourceId && onDownloadAll && (
           <div className="flex items-center gap-3 mb-2 text-[0.65rem]">
             {isDownloading ? (
               <>
@@ -257,14 +230,8 @@ export function ChapterDirectory({
           </div>
         )}
 
-        {webtoonError && (
-          <div className="text-[0.6rem] text-terminal-orange mb-1">
-            {">"} partial fetch error: {webtoonError}
-          </div>
-        )}
-
         <div className="space-y-0">
-          {slice.map((ep, idx) => {
+          {slice.map((ch, idx) => {
             const chapterNum = start + idx + 1;
             const num = String(chapterNum).padStart(3, "0");
             const { colorClass, bar, perm, statusLabel } = getChapterStatus(
@@ -276,7 +243,7 @@ export function ChapterDirectory({
             );
 
             const isChapterDownloaded = downloadedChapters?.has(chapterNum);
-            const canDownload = mangaId && onDownloadChapter && !isDownloading && !isChapterDownloaded;
+            const canDownload = mangaId && sourceId && onDownloadChapter && !isDownloading && !isChapterDownloaded;
 
             const row = (
               <div
@@ -285,7 +252,7 @@ export function ChapterDirectory({
               >
                 <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
                 <span className="w-[30px] shrink-0">{num}</span>
-                <span className="truncate flex-1 min-w-0">{ep.episodeTitle}</span>
+                <span className="truncate flex-1 min-w-0">{ch.title}</span>
                 <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
                 <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
                 {isChapterDownloaded && anilistId ? (
@@ -302,8 +269,9 @@ export function ChapterDirectory({
                       onDownloadChapter({
                         mangaId,
                         chapterNum,
-                        episodeTitle: ep.episodeTitle,
-                        viewerLink: ep.viewerLink,
+                        episodeTitle: ch.title,
+                        chapterUrl: ch.url,
+                        sourceId,
                       })
                     }
                     className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
@@ -330,21 +298,13 @@ export function ChapterDirectory({
     );
   }
 
-  // Show error notice then fall through to generated list
-  const showErrorNotice = webtoonError && !hasWebtoonEpisodes;
-
-  // Generated chapter list (original behavior)
+  // Generated chapter list (fallback when no source chapters available)
   const effectiveTotal = totalChapters ?? (isOnShelf && downloaded > 0 ? downloaded : null);
 
   if (effectiveTotal == null || effectiveTotal === 0) {
     return (
       <div className="border border-terminal-border/40 px-4 py-3">
         <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">--- CHAPTER DIRECTORY ---</div>
-        {showErrorNotice && (
-          <div className="text-[0.6rem] text-terminal-orange mb-1">
-            {">"} webtoon fetch failed, showing estimated chapters
-          </div>
-        )}
         <div className="text-xs text-terminal-dim">{">"} chapter count unknown (ongoing series)</div>
       </div>
     );
@@ -354,7 +314,7 @@ export function ChapterDirectory({
   const start = page * PER_PAGE + 1;
   const end = Math.min((page + 1) * PER_PAGE, effectiveTotal);
 
-  const chapters = [];
+  const chapterRows = [];
   for (let i = start; i <= end; i++) {
     const num = String(i).padStart(3, "0");
     const { colorClass, bar, perm, statusLabel } = getChapterStatus(i, downloaded, isOnShelf, downloadedChapters);
@@ -381,13 +341,13 @@ export function ChapterDirectory({
     );
 
     if (isChapterDownloaded && anilistId) {
-      chapters.push(
+      chapterRows.push(
         <Link key={i} href={`/manhwa/${anilistId}/read/${i}`} className="block">
           {row}
         </Link>,
       );
     } else {
-      chapters.push(<div key={i}>{row}</div>);
+      chapterRows.push(<div key={i}>{row}</div>);
     }
   }
 
@@ -398,13 +358,7 @@ export function ChapterDirectory({
         {isOnShelf && downloaded > 0 && <span> — {downloaded} cached</span>}
       </div>
 
-      {showErrorNotice && (
-        <div className="text-[0.6rem] text-terminal-orange mb-1">
-          {">"} webtoon fetch failed, showing estimated chapters
-        </div>
-      )}
-
-      <div className="space-y-0">{chapters}</div>
+      <div className="space-y-0">{chapterRows}</div>
 
       <Pagination page={page} totalPages={totalPages} setPage={setPage} />
     </div>

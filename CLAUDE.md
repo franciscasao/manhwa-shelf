@@ -25,7 +25,6 @@ Environment variables:
 Collections (created by `scripts/setup-pocketbase.ts`):
 - **`shelf`** — Library entries; one record per manga, ID is the AniList ID zero-padded to 15 chars
 - **`chapterDownloads`** — Downloaded chapter images stored as PocketBase file fields; indexed by `mangaId`
-- **`webtoonCache`** — Cached webtoon episode lists keyed by `titleId`
 
 ## Tech Stack
 
@@ -40,13 +39,12 @@ Collections (created by `scripts/setup-pocketbase.ts`):
 - `/` — Dashboard with stats and manga table
 - `/search` — AniList search with debounced input, add-to-shelf
 - `/library` — Full library with grid/list views, filtering, sorting
-- `/manhwa/[id]` — Detail page: AniList metadata, webtoon episodes, chapter download controls
+- `/manhwa/[id]` — Detail page: AniList metadata, source chapters, chapter download controls
 - `/manhwa/[id]/read/[chapter]` — Chapter reader: vertical image strip, toolbar auto-hide, keyboard nav, next-chapter prefetch
 - `/api/anilist` — POST proxy to `https://graphql.anilist.co`
-- `/api/webtoon` — Fetches episode list from Webtoons API
-- `/api/webtoon/pages` — Fetches image URLs from a webtoon viewer page
-- `/api/webtoon/image` — Proxies webtoon images (bypasses Referer restrictions)
-- `/api/webtoon/download` — Streams chapter download progress via NDJSON
+- `/api/source/chapters` — Fetches chapter list from any registered source extension
+- `/api/source/download` — Streams chapter download progress via NDJSON (source-agnostic)
+- `/api/source/image` — Proxies source images (bypasses Referer restrictions, checks all registered sources)
 - `/api/chapter/[mangaId]/[chapterNum]` — Returns stored chapter data + prev/next navigation from PocketBase
 
 ### Data Flow
@@ -54,21 +52,20 @@ Collections (created by `scripts/setup-pocketbase.ts`):
 - `src/lib/db-server.ts` — `getServerPB()` for API routes (creates a fresh instance per request)
 - `src/hooks/use-shelf.ts` — `useShelf()` hook: CRUD on `shelf` collection with real-time subscriptions
 - `src/hooks/use-media-detail.ts` — Fetches AniList detail for a single title
-- `src/hooks/use-webtoon-episodes.ts` — Fetches and caches webtoon episode list
+- `src/hooks/use-source-chapters.ts` — Fetches chapter list from any source extension via `/api/source/chapters`
 - `src/hooks/use-search-media.ts` — Debounced AniList search with pagination
-- `src/hooks/use-chapter-download.ts` — Manages a download queue, calls `/api/webtoon/download`, tracks per-chapter progress
+- `src/hooks/use-chapter-download.ts` — Manages a download queue, calls `/api/source/download`, tracks per-chapter progress
 - `src/hooks/use-chapter-reader.ts` — Loads chapter images from PocketBase; `usePrefetchChapter` preloads next chapter
 - `src/lib/anilist.ts` — AniList GraphQL client; `mapAniListToManga()` converts to internal `Manga` type
 - `src/lib/types.ts` — Core types (`Manga`, `DownloadStatus`, `DownloadStreamEvent`, etc.)
 - `src/lib/manga-utils.ts` — `toPocketBaseId()`, `getDownloadStatus()`, `getPercent()`, `sortManga()`, `statusConfig`
-- `src/lib/webtoon.ts` — Webtoon URL parsing, episode fetch, PocketBase cache read/write
-- `src/lib/webtoon-scraper.ts` — Server-side HTML scraping to extract image URLs from webtoon viewer pages
-- `src/lib/chapter-download.ts` — `downloadChapterToServer()`: streams NDJSON events from `/api/webtoon/download`
+- `src/lib/chapter-download.ts` — `downloadChapterToServer()`: streams NDJSON events from `/api/source/download`
+- `src/extensions/` — Source extension system: `Source` interface, registry, and built-in extensions (Webtoons, Tapas)
 
 ### Chapter Download Pipeline
-1. User triggers download → `use-chapter-download` enqueues `DownloadQueueItem`
-2. Queue processes serially: calls `downloadChapterToServer()` with viewer URL
-3. `/api/webtoon/download` scrapes viewer HTML → downloads images in batches of 3 → uploads to `chapterDownloads` collection → updates `shelf` downloaded count and size
+1. User triggers download → `use-chapter-download` enqueues `DownloadQueueItem` (with `sourceId` and `chapterUrl`)
+2. Queue processes serially: calls `downloadChapterToServer()` with source ID and chapter URL
+3. `/api/source/download` uses the source extension to fetch chapter pages → downloads images in batches of 3 → uploads to `chapterDownloads` collection → updates `shelf` downloaded count and size
 4. Progress streamed back as NDJSON (`DownloadStreamEvent` union type)
 
 ### ID Mapping

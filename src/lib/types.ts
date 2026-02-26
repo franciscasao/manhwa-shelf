@@ -24,7 +24,8 @@ export interface DownloadQueueItem {
   mangaId: string;
   chapterNum: number;
   episodeTitle: string;
-  viewerLink: string;
+  chapterUrl: string;
+  sourceId: string;
 }
 
 export type DownloadStreamEvent =

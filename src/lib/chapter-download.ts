@@ -9,16 +9,17 @@ export async function downloadChapterToServer(
   mangaId: string,
   mangaTitle: string,
   chapterNum: number,
-  viewerUrl: string,
+  chapterUrl: string,
   episodeTitle: string,
+  sourceId: string,
   onProgress?: (downloaded: number, total: number) => void,
   onUploading?: () => void,
   signal?: AbortSignal,
 ): Promise<DownloadResult> {
-  const res = await fetch("/api/webtoon/download", {
+  const res = await fetch("/api/source/download", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mangaId, mangaTitle, chapterNum, viewerUrl, episodeTitle }),
+    body: JSON.stringify({ sourceId, mangaId, mangaTitle, chapterNum, chapterUrl, episodeTitle }),
     signal,
   });
 

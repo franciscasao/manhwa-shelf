@@ -1,25 +1,30 @@
 import { NextRequest } from "next/server";
-import {
-  fetchWebtoonPage,
-  parseImageUrlsFromHtml,
-  fetchWebtoonImage,
-} from "@/lib/webtoon-scraper";
+import { getSource } from "@/extensions";
 import { getServerPB } from "@/lib/db-server";
 import type { DownloadStreamEvent } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { mangaId, chapterNum, viewerUrl, episodeTitle } = body as {
+  const { sourceId, mangaId, chapterNum, chapterUrl, episodeTitle } = body as {
+    sourceId: string;
     mangaId: string;
     mangaTitle: string;
     chapterNum: number;
-    viewerUrl: string;
+    chapterUrl: string;
     episodeTitle?: string;
   };
 
-  if (!mangaId || !chapterNum || !viewerUrl) {
+  if (!sourceId || !mangaId || !chapterNum || !chapterUrl) {
     return new Response(
       JSON.stringify({ type: "error", message: "Missing required fields" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const source = getSource(sourceId);
+  if (!source) {
+    return new Response(
+      JSON.stringify({ type: "error", message: `Unknown source: ${sourceId}` }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
@@ -34,17 +39,16 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        // 1. Fetch page HTML and extract image URLs
-        const html = await fetchWebtoonPage(viewerUrl);
-        const imageUrls = parseImageUrlsFromHtml(html);
+        // 1. Fetch page images from the source extension
+        const pages = await source.fetchChapterPages(chapterUrl);
 
-        if (imageUrls.length === 0) {
+        if (pages.length === 0) {
           send({ type: "error", message: "No images found in chapter" });
           controller.close();
           return;
         }
 
-        const total = imageUrls.length;
+        const total = pages.length;
         send({ type: "pages", total });
 
         // 2. Download images in batches of 3
@@ -52,16 +56,27 @@ export async function POST(request: NextRequest) {
         const batchSize = 3;
         let downloaded = 0;
 
-        for (let i = 0; i < imageUrls.length; i += batchSize) {
+        for (let i = 0; i < pages.length; i += batchSize) {
           if (cancelled) {
             send({ type: "error", message: "Download cancelled" });
             controller.close();
             return;
           }
 
-          const batch = imageUrls.slice(i, i + batchSize);
+          const batch = pages.slice(i, i + batchSize);
           const results = await Promise.all(
-            batch.map((url) => fetchWebtoonImage(url)),
+            batch.map(async (page) => {
+              const headers = { ...source.imageHeaders, ...page.headers };
+              const res = await fetch(page.url, { headers });
+
+              if (!res.ok) {
+                throw new Error(`Image fetch failed: ${res.status} for ${page.url}`);
+              }
+
+              const buffer = await res.arrayBuffer();
+              const contentType = res.headers.get("content-type") ?? "image/jpeg";
+              return { buffer, contentType };
+            }),
           );
 
           for (const { buffer, contentType } of results) {
@@ -102,20 +117,18 @@ export async function POST(request: NextRequest) {
         }
 
         if (existing.totalItems > 0) {
-          // Update existing record
           const record = await pb
             .collection("chapterDownloads")
             .update(existing.items[0].id, formData);
           recordId = record.id;
         } else {
-          // Create new record
           const record = await pb
             .collection("chapterDownloads")
             .create(formData);
           recordId = record.id;
         }
 
-        // 5. Update shelf downloaded count and size
+        // 4. Update shelf downloaded count and size
         try {
           const allChapters = await pb
             .collection("chapterDownloads")

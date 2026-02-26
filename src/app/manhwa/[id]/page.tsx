@@ -5,12 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { mapAniListToManga, getEnglishLinks } from "@/lib/anilist";
 import { toPocketBaseId } from "@/lib/manga-utils";
 import type { MangaOrigin } from "@/lib/types";
-import type { WebtoonType } from "@/lib/webtoon";
 import type { AniListExternalLink } from "@/lib/anilist";
 import { findSourceLink, type SourceIdentifier } from "@/extensions";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
-import { useWebtoonEpisodes } from "@/hooks/use-webtoon-episodes";
+import { useSourceChapters } from "@/hooks/use-source-chapters";
 import { useChapterDownload } from "@/hooks/use-chapter-download";
 import { ArrowLeft } from "lucide-react";
 import { ManhwaHeader } from "@/components/manhwa/manhwa-header";
@@ -25,15 +24,6 @@ function findActiveSource(links: AniListExternalLink[] | null | undefined): Sour
   return findSourceLink(getEnglishLinks(links)) ?? findSourceLink(links);
 }
 
-function toWebtoonParams(source: SourceIdentifier) {
-  const [titleId, type] = source.seriesId.split(":");
-  return {
-    titleId,
-    type: (type as WebtoonType) ?? "webtoon",
-    url: source.url,
-  };
-}
-
 export default function ManhwaDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -44,13 +34,7 @@ export default function ManhwaDetailPage() {
   const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
 
   const activeSource = media ? findActiveSource(media.externalLinks) : null;
-  const webtoonParams = activeSource?.sourceId === "webtoons" ? toWebtoonParams(activeSource) : null;
-  const {
-    episodes: webtoonEpisodes,
-    isLoading: webtoonLoading,
-    error: webtoonError,
-    refetch: webtoonRefetch,
-  } = useWebtoonEpisodes(webtoonParams);
+  const { chapters } = useSourceChapters(activeSource);
 
   const mangaTitle = media?.title?.english || media?.title?.romaji || "Unknown";
   const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
@@ -67,7 +51,7 @@ export default function ManhwaDetailPage() {
 
   // Sync total chapters to shelf after fetching episodes or AniList data
   const mangaId = toPocketBaseId(id);
-  const resolvedTotal = webtoonEpisodes?.length ?? media?.chapters ?? null;
+  const resolvedTotal = chapters?.length ?? media?.chapters ?? null;
   useEffect(() => {
     if (resolvedTotal && isOnShelf(mangaId)) {
       updateChaptersTotal(mangaId, resolvedTotal);
@@ -162,10 +146,8 @@ export default function ManhwaDetailPage() {
                 totalChapters={media.chapters}
                 downloaded={shelfEntry?.chapters.downloaded ?? 0}
                 isOnShelf={isOnShelf(toPocketBaseId(id))}
-                webtoonEpisodes={webtoonEpisodes}
-                webtoonLoading={webtoonLoading}
-                webtoonError={webtoonError}
-                onRefetch={webtoonRefetch}
+                chapters={chapters}
+                sourceId={activeSource?.sourceId}
                 mangaId={toPocketBaseId(id)}
                 anilistId={id}
                 currentProgress={currentProgress}

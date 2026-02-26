@@ -64,24 +64,6 @@ async function main() {
       updateRule: "",
       deleteRule: "",
     },
-    {
-      name: "webtoonCache",
-      type: "base",
-      fields: [
-        { name: "titleId", type: "text", required: true },
-        { name: "type", type: "text" },
-        { name: "episodes", type: "json", maxSize: 20000000 },
-        { name: "fetchedAt", type: "number" },
-      ],
-      indexes: [
-        "CREATE UNIQUE INDEX idx_webtoonCache_titleId ON webtoonCache (titleId)",
-      ],
-      listRule: "",
-      viewRule: "",
-      createRule: "",
-      updateRule: "",
-      deleteRule: "",
-    },
   ];
 
   console.log("Importing collections...");
