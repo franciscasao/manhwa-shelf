@@ -10,11 +10,7 @@ export const WEBTOON_IMAGE_HEADERS = {
   Referer: "https://www.webtoons.com/",
 };
 
-export const WEBTOON_IMAGE_DOMAINS = [
-  "webtoon-phinf.pstatic.net",
-  "swebtoon-phinf.pstatic.net",
-  "cdn.webtoons.com",
-];
+export const WEBTOON_IMAGE_DOMAINS = ["webtoon-phinf.pstatic.net", "swebtoon-phinf.pstatic.net", "cdn.webtoons.com"];
 
 export function parseImageUrlsFromHtml(html: string): string[] {
   const imgTagRegex = /<img[^>]+>/gi;
@@ -52,9 +48,7 @@ export function parseImageUrlsFromHtml(html: string): string[] {
 }
 
 export function resolveViewerUrl(viewerUrl: string): string {
-  return viewerUrl.startsWith("/")
-    ? `https://www.webtoons.com${viewerUrl}`
-    : viewerUrl;
+  return viewerUrl.startsWith("/") ? `https://www.webtoons.com${viewerUrl}` : viewerUrl;
 }
 
 export function validateViewerUrl(url: string): boolean {
@@ -69,9 +63,7 @@ export function validateViewerUrl(url: string): boolean {
 export function validateImageDomain(imageUrl: string): boolean {
   try {
     const parsed = new URL(imageUrl);
-    return WEBTOON_IMAGE_DOMAINS.some(
-      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`),
-    );
+    return WEBTOON_IMAGE_DOMAINS.some((d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`));
   } catch {
     return false;
   }
@@ -93,9 +85,7 @@ export async function fetchWebtoonPage(viewerUrl: string): Promise<string> {
   return res.text();
 }
 
-export async function fetchWebtoonImage(
-  imageUrl: string,
-): Promise<{ buffer: ArrayBuffer; contentType: string }> {
+export async function fetchWebtoonImage(imageUrl: string): Promise<{ buffer: ArrayBuffer; contentType: string }> {
   if (!validateImageDomain(imageUrl)) {
     throw new Error("Image domain not allowed");
   }

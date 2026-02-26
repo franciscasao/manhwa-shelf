@@ -2,10 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { mapAniListToManga } from "@/lib/anilist";
+import { mapAniListToManga, getEnglishLinks } from "@/lib/anilist";
 import { toPocketBaseId } from "@/lib/manga-utils";
 import type { MangaOrigin } from "@/lib/types";
-import { findWebtoonLink } from "@/lib/webtoon";
+import type { WebtoonType } from "@/lib/webtoon";
+import type { AniListExternalLink } from "@/lib/anilist";
+import { findSourceLink, type SourceIdentifier } from "@/extensions";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
 import { useWebtoonEpisodes } from "@/hooks/use-webtoon-episodes";
@@ -18,6 +20,20 @@ import { ChapterDirectory } from "@/components/manhwa/chapter-directory";
 import { ManhwaExternalLinks } from "@/components/manhwa/manhwa-external-links";
 import { ManhwaRelations } from "@/components/manhwa/manhwa-relations";
 
+function findActiveSource(links: AniListExternalLink[] | null | undefined): SourceIdentifier | null {
+  if (!links) return null;
+  return findSourceLink(getEnglishLinks(links)) ?? findSourceLink(links);
+}
+
+function toWebtoonParams(source: SourceIdentifier) {
+  const [titleId, type] = source.seriesId.split(":");
+  return {
+    titleId,
+    type: (type as WebtoonType) ?? "webtoon",
+    url: source.url,
+  };
+}
+
 export default function ManhwaDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -25,10 +41,10 @@ export default function ManhwaDetailPage() {
 
   const { media, isLoading, error: fetchError } = useMediaDetail(id);
   const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
-  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } =
-    useShelf();
+  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
 
-  const webtoonParams = media ? findWebtoonLink(media.externalLinks) : null;
+  const activeSource = media ? findActiveSource(media.externalLinks) : null;
+  const webtoonParams = activeSource?.sourceId === "webtoons" ? toWebtoonParams(activeSource) : null;
   const {
     episodes: webtoonEpisodes,
     isLoading: webtoonLoading,
@@ -37,15 +53,8 @@ export default function ManhwaDetailPage() {
   } = useWebtoonEpisodes(webtoonParams);
 
   const mangaTitle = media?.title?.english || media?.title?.romaji || "Unknown";
-  const {
-    queue,
-    currentProgress,
-    downloadedChapters,
-    enqueueChapter,
-    enqueueMany,
-    cancelQueue,
-    isDownloading,
-  } = useChapterDownload(toPocketBaseId(id), mangaTitle);
+  const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
+    useChapterDownload(toPocketBaseId(id), mangaTitle);
 
   const bootLines = useRef([
     "> initializing file inspector...",
@@ -67,10 +76,7 @@ export default function ManhwaDetailPage() {
 
   const handleAdd = () => {
     if (!media) return;
-    const manga = mapAniListToManga(
-      media,
-      (media.countryOfOrigin as MangaOrigin) ?? "KR",
-    );
+    const manga = mapAniListToManga(media, (media.countryOfOrigin as MangaOrigin) ?? "KR");
     addToShelf(manga);
   };
 
@@ -103,11 +109,7 @@ export default function ManhwaDetailPage() {
         {isLoading && (
           <div className="text-xs font-mono space-y-1">
             {bootLines.current.map((line, i) => (
-              <div
-                key={i}
-                className="text-terminal-dim detail-section"
-                style={{ animationDelay: `${i * 150}ms` }}
-              >
+              <div key={i} className="text-terminal-dim detail-section" style={{ animationDelay: `${i * 150}ms` }}>
                 {line}
               </div>
             ))}
@@ -127,9 +129,7 @@ export default function ManhwaDetailPage() {
             <div className="text-terminal-orange/70">
               {">"} ERR: {error}
             </div>
-            <div className="text-terminal-muted">
-              {">"} check media id and retry
-            </div>
+            <div className="text-terminal-muted">{">"} check media id and retry</div>
           </div>
         )}
 
@@ -138,12 +138,7 @@ export default function ManhwaDetailPage() {
           <div className="space-y-5">
             {/* Header section */}
             <div className="detail-section" style={{ animationDelay: "0ms" }}>
-              <ManhwaHeader
-                media={media}
-                shelfEntry={shelfEntry}
-                onAdd={handleAdd}
-                onRemove={handleRemove}
-              />
+              <ManhwaHeader media={media} shelfEntry={shelfEntry} onAdd={handleAdd} onRemove={handleRemove} />
             </div>
 
             {/* Metadata */}
@@ -158,7 +153,7 @@ export default function ManhwaDetailPage() {
 
             {/* External Sources */}
             <div className="detail-section" style={{ animationDelay: "250ms" }}>
-              <ManhwaExternalLinks externalLinks={media.externalLinks} />
+              <ManhwaExternalLinks externalLinks={media.externalLinks} activeSourceUrl={activeSource?.url} />
             </div>
 
             {/* Chapter Directory */}
@@ -170,7 +165,6 @@ export default function ManhwaDetailPage() {
                 webtoonEpisodes={webtoonEpisodes}
                 webtoonLoading={webtoonLoading}
                 webtoonError={webtoonError}
-                webtoonUrl={webtoonParams?.url}
                 onRefetch={webtoonRefetch}
                 mangaId={toPocketBaseId(id)}
                 anilistId={id}

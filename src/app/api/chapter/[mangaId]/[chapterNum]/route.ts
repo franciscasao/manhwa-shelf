@@ -24,13 +24,11 @@ export async function GET(
       .getFirstListItem(`mangaId = "${mangaId}" && chapterNum = ${num}`);
 
     // Fetch all chapter numbers for this manga to compute prev/next
-    const allChapters = await pb
-      .collection("chapterDownloads")
-      .getFullList({
-        filter: `mangaId = "${mangaId}"`,
-        fields: "chapterNum",
-        sort: "chapterNum",
-      });
+    const allChapters = await pb.collection("chapterDownloads").getFullList({
+      filter: `mangaId = "${mangaId}"`,
+      fields: "chapterNum",
+      sort: "chapterNum",
+    });
 
     const chapterNums = allChapters
       .map((c) => c.chapterNum as number)
@@ -39,9 +37,7 @@ export async function GET(
     const currentIdx = chapterNums.indexOf(num);
     const prevChapter = currentIdx > 0 ? chapterNums[currentIdx - 1] : null;
     const nextChapter =
-      currentIdx < chapterNums.length - 1
-        ? chapterNums[currentIdx + 1]
-        : null;
+      currentIdx < chapterNums.length - 1 ? chapterNums[currentIdx + 1] : null;
 
     return NextResponse.json({
       recordId: chapter.id,
@@ -53,9 +49,6 @@ export async function GET(
       nextChapter,
     });
   } catch {
-    return NextResponse.json(
-      { error: "Chapter not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
   }
 }

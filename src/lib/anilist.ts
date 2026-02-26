@@ -30,6 +30,12 @@ export interface AniListExternalLink {
   color: string | null;
 }
 
+/** Filter external links to only English (or null-language), non-social links. */
+export function getEnglishLinks(links: AniListExternalLink[] | null | undefined): AniListExternalLink[] {
+  if (!links) return [];
+  return links.filter((link) => (link.language === "English" || link.language === null) && link.type !== "SOCIAL");
+}
+
 export interface AniListMediaDetail extends AniListMedia {
   description: string | null;
   bannerImage: string | null;
@@ -129,11 +135,7 @@ export async function searchMedia(
   };
 }
 
-export async function searchManhwa(
-  query: string,
-  page = 1,
-  perPage = 20,
-): Promise<SearchResult> {
+export async function searchManhwa(query: string, page = 1, perPage = 20): Promise<SearchResult> {
   return searchMedia(query, "KR", page, perPage);
 }
 
@@ -199,13 +201,9 @@ export async function fetchManhwaById(id: number): Promise<AniListMediaDetail> {
 }
 
 export function mapAniListToManga(media: AniListMedia, origin?: MangaOrigin): Manga {
-  const resolvedOrigin: MangaOrigin =
-    origin ?? (media.countryOfOrigin as MangaOrigin) ?? "KR";
-  const storyEdge = media.staff.edges.find(
-    (e) => e.role === "Story" || e.role === "Story & Art",
-  );
-  const author =
-    storyEdge?.node.name.full ?? media.staff.nodes[0]?.name.full ?? "Unknown";
+  const resolvedOrigin: MangaOrigin = origin ?? (media.countryOfOrigin as MangaOrigin) ?? "KR";
+  const storyEdge = media.staff.edges.find((e) => e.role === "Story" || e.role === "Story & Art");
+  const author = storyEdge?.node.name.full ?? media.staff.nodes[0]?.name.full ?? "Unknown";
 
   return {
     id: toPocketBaseId(media.id),

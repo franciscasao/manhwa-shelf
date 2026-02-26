@@ -12,7 +12,6 @@ interface ChapterDirectoryProps {
   webtoonEpisodes?: WebtoonEpisode[] | null;
   webtoonLoading?: boolean;
   webtoonError?: string | null;
-  webtoonUrl?: string;
   onRefetch?: () => void;
   mangaId?: string;
   anilistId?: number;
@@ -47,8 +46,7 @@ function getChapterStatus(
       };
     }
     if (state === "downloading") {
-      const filled =
-        imagesTotal > 0 ? Math.round((imagesDownloaded / imagesTotal) * 8) : 0;
+      const filled = imagesTotal > 0 ? Math.round((imagesDownloaded / imagesTotal) * 8) : 0;
       return {
         status: "SYNC" as const,
         colorClass: "text-terminal-orange",
@@ -129,9 +127,7 @@ function Pagination({
         onClick={() => setPage((p) => Math.max(0, p - 1))}
         disabled={page === 0}
         className={`font-mono ${
-          page === 0
-            ? "text-terminal-dim cursor-not-allowed"
-            : "text-terminal-cyan hover:text-terminal-green"
+          page === 0 ? "text-terminal-dim cursor-not-allowed" : "text-terminal-cyan hover:text-terminal-green"
         }`}
       >
         [ &lt; PREV PAGE ]
@@ -161,7 +157,6 @@ export function ChapterDirectory({
   webtoonEpisodes,
   webtoonLoading,
   webtoonError,
-  webtoonUrl,
   onRefetch,
   mangaId,
   anilistId,
@@ -181,9 +176,7 @@ export function ChapterDirectory({
   if (webtoonLoading) {
     return (
       <div className="border border-terminal-border/40 px-4 py-3">
-        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">
-          --- CHAPTER DIRECTORY ---
-        </div>
+        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">--- CHAPTER DIRECTORY ---</div>
         <div className="text-xs text-terminal-dim">
           {">"} fetching webtoon episodes<span className="blink-cursor">_</span>
         </div>
@@ -193,9 +186,7 @@ export function ChapterDirectory({
 
   // Webtoon episodes available — render real episode list
   if (hasWebtoonEpisodes) {
-    const sorted = [...webtoonEpisodes].sort(
-      (a, b) => a.exposureDateMillis - b.exposureDateMillis,
-    );
+    const sorted = [...webtoonEpisodes].sort((a, b) => a.exposureDateMillis - b.exposureDateMillis);
     const totalEpisodes = sorted.length;
     const totalPages = Math.ceil(totalEpisodes / PER_PAGE);
     const start = page * PER_PAGE;
@@ -224,9 +215,7 @@ export function ChapterDirectory({
               onClick={onRefetch}
               disabled={webtoonLoading}
               className={`ml-2 ${
-                webtoonLoading
-                  ? "text-terminal-dim cursor-not-allowed"
-                  : "text-terminal-cyan hover:text-terminal-green"
+                webtoonLoading ? "text-terminal-dim cursor-not-allowed" : "text-terminal-cyan hover:text-terminal-green"
               }`}
             >
               [ REFETCH ]
@@ -245,29 +234,17 @@ export function ChapterDirectory({
                     {String(currentProgress.chapterNum).padStart(3, "0")}
                     {currentProgress.state === "downloading" &&
                       ` [${currentProgress.imagesDownloaded}/${currentProgress.imagesTotal}]`}
-                    {currentProgress.state === "fetching-pages" &&
-                      " [scanning]"}
-                    {currentProgress.state === "uploading" &&
-                      " [uploading to db]"}
+                    {currentProgress.state === "fetching-pages" && " [scanning]"}
+                    {currentProgress.state === "uploading" && " [uploading to db]"}
                   </span>
                 )}
-                {(queueLength ?? 0) > 1 && (
-                  <span className="text-terminal-dim">
-                    ({(queueLength ?? 1) - 1} queued)
-                  </span>
-                )}
-                <button
-                  onClick={onCancelDownload}
-                  className="text-red-400 hover:text-red-300"
-                >
+                {(queueLength ?? 0) > 1 && <span className="text-terminal-dim">({(queueLength ?? 1) - 1} queued)</span>}
+                <button onClick={onCancelDownload} className="text-red-400 hover:text-red-300">
                   [ CANCEL ]
                 </button>
               </>
             ) : (
-              <button
-                onClick={handleDownloadAll}
-                className="text-terminal-cyan hover:text-terminal-green"
-              >
+              <button onClick={handleDownloadAll} className="text-terminal-cyan hover:text-terminal-green">
                 [ DOWNLOAD ALL ]
               </button>
             )}
@@ -276,8 +253,7 @@ export function ChapterDirectory({
 
         {currentProgress?.state === "error" && (
           <div className="text-[0.6rem] text-red-400 mb-1">
-            {">"} error on ch.{currentProgress.chapterNum}:{" "}
-            {currentProgress.error}
+            {">"} error on ch.{currentProgress.chapterNum}: {currentProgress.error}
           </div>
         )}
 
@@ -300,30 +276,18 @@ export function ChapterDirectory({
             );
 
             const isChapterDownloaded = downloadedChapters?.has(chapterNum);
-            const canDownload =
-              mangaId &&
-              onDownloadChapter &&
-              !isDownloading &&
-              !isChapterDownloaded;
+            const canDownload = mangaId && onDownloadChapter && !isDownloading && !isChapterDownloaded;
 
             const row = (
               <div
                 key={chapterNum}
                 className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}
               >
-                <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">
-                  {perm}
-                </span>
+                <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
                 <span className="w-[30px] shrink-0">{num}</span>
-                <span className="truncate flex-1 min-w-0">
-                  {ep.episodeTitle}
-                </span>
-                <span className="w-[70px] shrink-0 hidden sm:inline">
-                  {bar}
-                </span>
-                <span className="shrink-0 w-[36px] text-right">
-                  {statusLabel}
-                </span>
+                <span className="truncate flex-1 min-w-0">{ep.episodeTitle}</span>
+                <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
+                <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
                 {isChapterDownloaded && anilistId ? (
                   <Link
                     href={`/manhwa/${anilistId}/read/${chapterNum}`}
@@ -352,11 +316,7 @@ export function ChapterDirectory({
 
             if (isChapterDownloaded && anilistId) {
               return (
-                <Link
-                  key={chapterNum}
-                  href={`/manhwa/${anilistId}/read/${chapterNum}`}
-                  className="block"
-                >
+                <Link key={chapterNum} href={`/manhwa/${anilistId}/read/${chapterNum}`} className="block">
                   {row}
                 </Link>
               );
@@ -366,19 +326,6 @@ export function ChapterDirectory({
         </div>
 
         <Pagination page={page} totalPages={totalPages} setPage={setPage} />
-
-        {webtoonUrl && (
-          <div className="mt-3 text-[0.6rem]">
-            <a
-              href={webtoonUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-terminal-cyan hover:text-terminal-green transition-colors"
-            >
-              {">"} read on webtoons.com →
-            </a>
-          </div>
-        )}
       </div>
     );
   }
@@ -387,23 +334,18 @@ export function ChapterDirectory({
   const showErrorNotice = webtoonError && !hasWebtoonEpisodes;
 
   // Generated chapter list (original behavior)
-  const effectiveTotal =
-    totalChapters ?? (isOnShelf && downloaded > 0 ? downloaded : null);
+  const effectiveTotal = totalChapters ?? (isOnShelf && downloaded > 0 ? downloaded : null);
 
   if (effectiveTotal == null || effectiveTotal === 0) {
     return (
       <div className="border border-terminal-border/40 px-4 py-3">
-        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">
-          --- CHAPTER DIRECTORY ---
-        </div>
+        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">--- CHAPTER DIRECTORY ---</div>
         {showErrorNotice && (
           <div className="text-[0.6rem] text-terminal-orange mb-1">
             {">"} webtoon fetch failed, showing estimated chapters
           </div>
         )}
-        <div className="text-xs text-terminal-dim">
-          {">"} chapter count unknown (ongoing series)
-        </div>
+        <div className="text-xs text-terminal-dim">{">"} chapter count unknown (ongoing series)</div>
       </div>
     );
   }
@@ -415,21 +357,14 @@ export function ChapterDirectory({
   const chapters = [];
   for (let i = start; i <= end; i++) {
     const num = String(i).padStart(3, "0");
-    const { colorClass, bar, perm, statusLabel } = getChapterStatus(
-      i,
-      downloaded,
-      isOnShelf,
-      downloadedChapters,
-    );
+    const { colorClass, bar, perm, statusLabel } = getChapterStatus(i, downloaded, isOnShelf, downloadedChapters);
     const isChapterDownloaded = downloadedChapters?.has(i);
 
     const row = (
       <div
         className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}
       >
-        <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">
-          {perm}
-        </span>
+        <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
         <span className="w-[90px] shrink-0">Chapter {num}</span>
         <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
         <span className="shrink-0">{statusLabel}</span>

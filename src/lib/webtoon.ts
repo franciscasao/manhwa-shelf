@@ -1,4 +1,3 @@
-import type { AniListExternalLink } from "@/lib/anilist";
 import { pb } from "@/lib/db";
 
 export interface WebtoonCache {
@@ -29,46 +28,8 @@ export interface WebtoonParams {
   url: string;
 }
 
-export function parseWebtoonUrl(url: string): WebtoonParams | null {
-  try {
-    const parsed = new URL(url);
-    if (!parsed.hostname.includes("webtoons.com")) return null;
-
-    const titleId = parsed.searchParams.get("title_no");
-    if (!titleId) return null;
-
-    const type: WebtoonType = parsed.pathname.includes("/canvas/")
-      ? "canvas"
-      : "webtoon";
-
-    return { titleId, type, url };
-  } catch {
-    return null;
-  }
-}
-
-export function findWebtoonLink(
-  externalLinks: AniListExternalLink[] | null | undefined,
-): WebtoonParams | null {
-  if (!externalLinks) return null;
-
-  let fallback: WebtoonParams | null = null;
-  for (const link of externalLinks) {
-    const params = parseWebtoonUrl(link.url);
-    if (!params) continue;
-    if (link.language === null || link.language === "English") return params;
-    fallback ??= params;
-  }
-  return fallback;
-}
-
-export async function fetchWebtoonEpisodes(
-  titleId: string,
-  type: WebtoonType,
-): Promise<WebtoonEpisode[]> {
-  const res = await fetch(
-    `/api/webtoon?titleId=${encodeURIComponent(titleId)}&type=${encodeURIComponent(type)}`,
-  );
+export async function fetchWebtoonEpisodes(titleId: string, type: WebtoonType): Promise<WebtoonEpisode[]> {
+  const res = await fetch(`/api/webtoon?titleId=${encodeURIComponent(titleId)}&type=${encodeURIComponent(type)}`);
 
   if (!res.ok) {
     throw new Error(`Webtoon fetch failed: ${res.status}`);
@@ -78,13 +39,9 @@ export async function fetchWebtoonEpisodes(
   return json.result?.episodeList ?? [];
 }
 
-export async function getWebtoonCache(
-  titleId: string,
-): Promise<WebtoonCache | undefined> {
+export async function getWebtoonCache(titleId: string): Promise<WebtoonCache | undefined> {
   try {
-    const record = await pb
-      .collection("webtoonCache")
-      .getFirstListItem(`titleId = "${titleId}"`);
+    const record = await pb.collection("webtoonCache").getFirstListItem(`titleId = "${titleId}"`);
     return {
       titleId: record["titleId"] as string,
       type: record["type"] as WebtoonType,
@@ -96,16 +53,10 @@ export async function getWebtoonCache(
   }
 }
 
-export async function saveWebtoonCache(
-  titleId: string,
-  type: WebtoonType,
-  episodes: WebtoonEpisode[],
-): Promise<void> {
+export async function saveWebtoonCache(titleId: string, type: WebtoonType, episodes: WebtoonEpisode[]): Promise<void> {
   let existingId: string | undefined;
   try {
-    const existing = await pb
-      .collection("webtoonCache")
-      .getFirstListItem(`titleId = "${titleId}"`);
+    const existing = await pb.collection("webtoonCache").getFirstListItem(`titleId = "${titleId}"`);
     existingId = existing.id;
   } catch {
     // Record doesn't exist yet — will create below
@@ -118,17 +69,13 @@ export async function saveWebtoonCache(
       fetchedAt: Date.now(),
     });
   } else {
-    await pb
-      .collection("webtoonCache")
-      .create({ titleId, type, episodes, fetchedAt: Date.now() });
+    await pb.collection("webtoonCache").create({ titleId, type, episodes, fetchedAt: Date.now() });
   }
 }
 
 export async function clearWebtoonCache(titleId: string): Promise<void> {
   try {
-    const existing = await pb
-      .collection("webtoonCache")
-      .getFirstListItem(`titleId = "${titleId}"`);
+    const existing = await pb.collection("webtoonCache").getFirstListItem(`titleId = "${titleId}"`);
     await pb.collection("webtoonCache").delete(existing.id);
   } catch {
     // Cache entry doesn't exist, nothing to clear
