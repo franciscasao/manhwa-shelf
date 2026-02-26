@@ -51,11 +51,15 @@ export function findWebtoonLink(
   externalLinks: AniListExternalLink[] | null | undefined,
 ): WebtoonParams | null {
   if (!externalLinks) return null;
+
+  let fallback: WebtoonParams | null = null;
   for (const link of externalLinks) {
     const params = parseWebtoonUrl(link.url);
-    if (params) return params;
+    if (!params) continue;
+    if (link.language === null || link.language === "English") return params;
+    fallback ??= params;
   }
-  return null;
+  return fallback;
 }
 
 export async function fetchWebtoonEpisodes(
@@ -97,16 +101,23 @@ export async function saveWebtoonCache(
   type: WebtoonType,
   episodes: WebtoonEpisode[],
 ): Promise<void> {
+  let existingId: string | undefined;
   try {
     const existing = await pb
       .collection("webtoonCache")
       .getFirstListItem(`titleId = "${titleId}"`);
-    await pb.collection("webtoonCache").update(existing.id, {
+    existingId = existing.id;
+  } catch {
+    // Record doesn't exist yet — will create below
+  }
+
+  if (existingId) {
+    await pb.collection("webtoonCache").update(existingId, {
       type,
       episodes,
       fetchedAt: Date.now(),
     });
-  } catch {
+  } else {
     await pb
       .collection("webtoonCache")
       .create({ titleId, type, episodes, fetchedAt: Date.now() });

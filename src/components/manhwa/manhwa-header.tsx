@@ -12,13 +12,20 @@ interface ManhwaHeaderProps {
   onRemove: () => void;
 }
 
-export function ManhwaHeader({ media, shelfEntry, onAdd, onRemove }: ManhwaHeaderProps) {
+export function ManhwaHeader({
+  media,
+  shelfEntry,
+  onAdd,
+  onRemove,
+}: ManhwaHeaderProps) {
   const title = media.title.english ?? media.title.romaji;
   const romaji = media.title.english ? media.title.romaji : null;
   const isOnShelf = !!shelfEntry;
   const status = shelfEntry ? getDownloadStatus(shelfEntry) : null;
-  const score = media.averageScore != null ? (media.averageScore / 10).toFixed(1) : null;
-  const chaptersStr = media.chapters != null ? `${media.chapters} ch` : "ongoing";
+  const score =
+    media.averageScore != null ? (media.averageScore / 10).toFixed(1) : null;
+  const chaptersStr =
+    media.chapters != null ? `${media.chapters} ch` : "ongoing";
 
   return (
     <div className="flex flex-col md:flex-row gap-5 md:gap-6">
@@ -63,9 +70,7 @@ export function ManhwaHeader({ media, shelfEntry, onAdd, onRemove }: ManhwaHeade
               {media.status.replace(/_/g, " ")}
             </span>
           )}
-          {score && (
-            <span className="text-terminal-orange">★ {score}</span>
-          )}
+          {score && <span className="text-terminal-orange">★ {score}</span>}
           <span className="text-terminal-dim">{chaptersStr}</span>
           {media.countryOfOrigin && (
             <span className="text-terminal-dim border border-terminal-border/40 px-1.5 py-0.5">
@@ -108,8 +113,7 @@ export function ManhwaHeader({ media, shelfEntry, onAdd, onRemove }: ManhwaHeade
             onClick={onAdd}
             className="flex items-center gap-1.5 border border-terminal-cyan/40 px-3 py-1.5 text-xs text-terminal-cyan hover:bg-terminal-cyan/10 transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
-            [ + ADD TO SHELF ]
+            <Plus className="h-3.5 w-3.5" />[ ADD TO SHELF ]
           </button>
         )}
       </div>
