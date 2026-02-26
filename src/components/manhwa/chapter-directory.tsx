@@ -47,7 +47,8 @@ function getChapterStatus(
       };
     }
     if (state === "downloading") {
-      const filled = imagesTotal > 0 ? Math.round((imagesDownloaded / imagesTotal) * 8) : 0;
+      const filled =
+        imagesTotal > 0 ? Math.round((imagesDownloaded / imagesTotal) * 8) : 0;
       return {
         status: "SYNC" as const,
         colorClass: "text-terminal-orange",
@@ -112,7 +113,15 @@ function getChapterStatus(
   return { status, colorClass, bar, perm, statusLabel: status };
 }
 
-function Pagination({ page, totalPages, setPage }: { page: number; totalPages: number; setPage: (fn: (p: number) => number) => void }) {
+function Pagination({
+  page,
+  totalPages,
+  setPage,
+}: {
+  page: number;
+  totalPages: number;
+  setPage: (fn: (p: number) => number) => void;
+}) {
   if (totalPages <= 1) return null;
   return (
     <div className="flex items-center gap-3 mt-3 text-xs">
@@ -232,11 +241,14 @@ export function ChapterDirectory({
               <>
                 {currentProgress && (
                   <span className="text-terminal-orange">
-                    {">"} downloading ch.{String(currentProgress.chapterNum).padStart(3, "0")}
+                    {">"} downloading ch.
+                    {String(currentProgress.chapterNum).padStart(3, "0")}
                     {currentProgress.state === "downloading" &&
                       ` [${currentProgress.imagesDownloaded}/${currentProgress.imagesTotal}]`}
-                    {currentProgress.state === "fetching-pages" && " [scanning]"}
-                    {currentProgress.state === "uploading" && " [uploading to db]"}
+                    {currentProgress.state === "fetching-pages" &&
+                      " [scanning]"}
+                    {currentProgress.state === "uploading" &&
+                      " [uploading to db]"}
                   </span>
                 )}
                 {(queueLength ?? 0) > 1 && (
@@ -264,7 +276,8 @@ export function ChapterDirectory({
 
         {currentProgress?.state === "error" && (
           <div className="text-[0.6rem] text-red-400 mb-1">
-            {">"} error on ch.{currentProgress.chapterNum}: {currentProgress.error}
+            {">"} error on ch.{currentProgress.chapterNum}:{" "}
+            {currentProgress.error}
           </div>
         )}
 
@@ -308,7 +321,9 @@ export function ChapterDirectory({
                 <span className="w-[70px] shrink-0 hidden sm:inline">
                   {bar}
                 </span>
-                <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
+                <span className="shrink-0 w-[36px] text-right">
+                  {statusLabel}
+                </span>
                 {isChapterDownloaded && anilistId ? (
                   <Link
                     href={`/manhwa/${anilistId}/read/${chapterNum}`}
@@ -337,7 +352,11 @@ export function ChapterDirectory({
 
             if (isChapterDownloaded && anilistId) {
               return (
-                <Link key={chapterNum} href={`/manhwa/${anilistId}/read/${chapterNum}`} className="block">
+                <Link
+                  key={chapterNum}
+                  href={`/manhwa/${anilistId}/read/${chapterNum}`}
+                  className="block"
+                >
                   {row}
                 </Link>
               );
@@ -368,7 +387,8 @@ export function ChapterDirectory({
   const showErrorNotice = webtoonError && !hasWebtoonEpisodes;
 
   // Generated chapter list (original behavior)
-  const effectiveTotal = totalChapters ?? (isOnShelf && downloaded > 0 ? downloaded : null);
+  const effectiveTotal =
+    totalChapters ?? (isOnShelf && downloaded > 0 ? downloaded : null);
 
   if (effectiveTotal == null || effectiveTotal === 0) {
     return (
@@ -395,12 +415,21 @@ export function ChapterDirectory({
   const chapters = [];
   for (let i = start; i <= end; i++) {
     const num = String(i).padStart(3, "0");
-    const { colorClass, bar, perm, statusLabel } = getChapterStatus(i, downloaded, isOnShelf, downloadedChapters);
+    const { colorClass, bar, perm, statusLabel } = getChapterStatus(
+      i,
+      downloaded,
+      isOnShelf,
+      downloadedChapters,
+    );
     const isChapterDownloaded = downloadedChapters?.has(i);
 
     const row = (
-      <div className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}>
-        <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
+      <div
+        className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}
+      >
+        <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">
+          {perm}
+        </span>
         <span className="w-[90px] shrink-0">Chapter {num}</span>
         <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
         <span className="shrink-0">{statusLabel}</span>
@@ -420,7 +449,7 @@ export function ChapterDirectory({
       chapters.push(
         <Link key={i} href={`/manhwa/${anilistId}/read/${i}`} className="block">
           {row}
-        </Link>
+        </Link>,
       );
     } else {
       chapters.push(<div key={i}>{row}</div>);
@@ -440,9 +469,7 @@ export function ChapterDirectory({
         </div>
       )}
 
-      <div className="space-y-0">
-        {chapters}
-      </div>
+      <div className="space-y-0">{chapters}</div>
 
       <Pagination page={page} totalPages={totalPages} setPage={setPage} />
     </div>

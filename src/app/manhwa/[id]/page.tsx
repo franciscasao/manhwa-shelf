@@ -25,7 +25,8 @@ export default function ManhwaDetailPage() {
 
   const { media, isLoading, error: fetchError } = useMediaDetail(id);
   const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
-  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
+  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } =
+    useShelf();
 
   const webtoonParams = media ? findWebtoonLink(media.externalLinks) : null;
   const {
@@ -66,7 +67,10 @@ export default function ManhwaDetailPage() {
 
   const handleAdd = () => {
     if (!media) return;
-    const manga = mapAniListToManga(media, (media.countryOfOrigin as MangaOrigin) ?? "KR");
+    const manga = mapAniListToManga(
+      media,
+      (media.countryOfOrigin as MangaOrigin) ?? "KR",
+    );
     addToShelf(manga);
   };
 
@@ -77,9 +81,14 @@ export default function ManhwaDetailPage() {
   return (
     <div className="font-mono relative min-h-screen bg-terminal-bg text-terminal-green overflow-hidden">
       {/* CRT scanline overlay */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 z-50" style={{
-        background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px)"
-      }} />
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-50"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px)",
+        }}
+      />
 
       <div className="relative z-10 mx-auto max-w-[900px] animate-[flicker_4s_infinite] px-3 py-6 md:px-8 md:py-10">
         {/* Back button */}
@@ -87,8 +96,7 @@ export default function ManhwaDetailPage() {
           onClick={() => router.back()}
           className="flex items-center gap-1.5 text-xs text-terminal-dim hover:text-terminal-cyan transition-colors mb-4"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          [ BACK ]
+          <ArrowLeft className="h-3.5 w-3.5" />[ BACK ]
         </button>
 
         {/* Loading state — terminal boot sequence */}
@@ -116,8 +124,12 @@ export default function ManhwaDetailPage() {
         {error && !isLoading && (
           <div className="border border-terminal-orange/40 bg-terminal-orange/[0.03] px-3 py-3 text-xs font-mono space-y-0.5">
             <div className="text-terminal-orange">{">"} INSPECTION ERROR</div>
-            <div className="text-terminal-orange/70">{">"} ERR: {error}</div>
-            <div className="text-terminal-muted">{">"} check media id and retry</div>
+            <div className="text-terminal-orange/70">
+              {">"} ERR: {error}
+            </div>
+            <div className="text-terminal-muted">
+              {">"} check media id and retry
+            </div>
           </div>
         )}
 
@@ -178,18 +190,21 @@ export default function ManhwaDetailPage() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-terminal-border pt-3 text-[0.6rem] font-mono text-terminal-muted detail-section" style={{ animationDelay: "500ms" }}>
+            <div
+              className="border-t border-terminal-border pt-3 text-[0.6rem] font-mono text-terminal-muted detail-section"
+              style={{ animationDelay: "500ms" }}
+            >
               <span className="text-terminal-dim">[</span>
               <span className="text-terminal-green">DB</span>
-              <span className="text-terminal-dim">]</span>
-              {" "}media #{media.id}
+              <span className="text-terminal-dim">]</span> media #{media.id}
               <span className="mx-2">|</span>
               source: anilist
               <span className="mx-2">|</span>
-              {isOnShelf(toPocketBaseId(id))
-                ? <span className="text-terminal-green">on shelf</span>
-                : <span>not on shelf</span>
-              }
+              {isOnShelf(toPocketBaseId(id)) ? (
+                <span className="text-terminal-green">on shelf</span>
+              ) : (
+                <span>not on shelf</span>
+              )}
             </div>
           </div>
         )}
