@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { SourceChapter } from "@/extensions";
 import type { ChapterProgress, DownloadQueueItem } from "@/lib/types";
+import { useChapterDownload } from "@/hooks/use-chapter-download";
 
 interface ChapterDirectoryProps {
   totalChapters: number | null;
@@ -11,15 +12,9 @@ interface ChapterDirectoryProps {
   isOnShelf: boolean;
   chapters?: SourceChapter[] | null;
   sourceId?: string;
-  mangaId?: string;
+  mangaId: string;
+  mangaTitle: string;
   anilistId?: number;
-  currentProgress?: ChapterProgress | null;
-  downloadedChapters?: Set<number>;
-  queueLength?: number;
-  isDownloading?: boolean;
-  onDownloadChapter?: (item: DownloadQueueItem) => void;
-  onDownloadAll?: (items: DownloadQueueItem[]) => void;
-  onCancelDownload?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   isLoadingChapters?: boolean;
@@ -112,6 +107,152 @@ function getChapterStatus(
   return { status, colorClass, bar, perm, statusLabel: status };
 }
 
+function DirectoryShell({
+  entryCount,
+  cached,
+  onRefresh,
+  isRefreshing,
+  children,
+}: {
+  entryCount?: number;
+  cached?: number;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-terminal-border/40 px-4 py-3">
+      <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2 flex items-center justify-between">
+        <span>
+          --- CHAPTER DIRECTORY ---
+          {entryCount != null && <> {entryCount} entries</>}
+          {cached != null && cached > 0 && <span> — {cached} cached</span>}
+        </span>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            className={`font-mono ${
+              isRefreshing ? "text-terminal-orange cursor-wait" : "text-terminal-cyan hover:text-terminal-green"
+            }`}
+          >
+            {isRefreshing ? "[ SCANNING... ]" : "[ REFRESH ]"}
+          </button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DownloadControls({
+  isDownloading,
+  currentProgress,
+  queueLength,
+  onDownloadAll,
+  onCancel,
+}: {
+  isDownloading: boolean;
+  currentProgress: ChapterProgress | null;
+  queueLength: number;
+  onDownloadAll: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 mb-2 text-[0.65rem]">
+      {isDownloading ? (
+        <>
+          {currentProgress && (
+            <span className="text-terminal-orange">
+              {">"} downloading ch.
+              {String(currentProgress.chapterNum).padStart(3, "0")}
+              {currentProgress.state === "downloading" &&
+                ` [${currentProgress.imagesDownloaded}/${currentProgress.imagesTotal}]`}
+              {currentProgress.state === "fetching-pages" && " [scanning]"}
+              {currentProgress.state === "uploading" && " [uploading to db]"}
+            </span>
+          )}
+          {queueLength > 1 && <span className="text-terminal-dim">({queueLength - 1} queued)</span>}
+          <button onClick={onCancel} className="text-red-400 hover:text-red-300">
+            [ CANCEL ]
+          </button>
+        </>
+      ) : (
+        <button onClick={onDownloadAll} className="text-terminal-cyan hover:text-terminal-green">
+          [ DOWNLOAD ALL ]
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ChapterRow({
+  chapterNum,
+  label,
+  downloaded,
+  isOnShelf,
+  downloadedChapters,
+  currentProgress,
+  anilistId,
+  onDownload,
+}: {
+  chapterNum: number;
+  label: string;
+  downloaded: number;
+  isOnShelf: boolean;
+  downloadedChapters: Set<number>;
+  currentProgress: ChapterProgress | null;
+  anilistId?: number;
+  onDownload?: () => void;
+}) {
+  const num = String(chapterNum).padStart(3, "0");
+  const { colorClass, bar, perm, statusLabel } = getChapterStatus(
+    chapterNum,
+    downloaded,
+    isOnShelf,
+    downloadedChapters,
+    currentProgress,
+  );
+  const isChapterDownloaded = downloadedChapters.has(chapterNum);
+  const readHref = anilistId ? `/manhwa/${anilistId}/read/${chapterNum}` : null;
+
+  const row = (
+    <div
+      className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${
+        isChapterDownloaded && readHref ? " hover:bg-terminal-row-hover cursor-pointer" : ""
+      }`}
+    >
+      <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
+      <span className="w-[30px] shrink-0">{num}</span>
+      <span className="truncate flex-1 min-w-0">{label}</span>
+      <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
+      <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
+      {isChapterDownloaded && readHref ? (
+        <Link
+          href={readHref}
+          className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          [ READ ]
+        </Link>
+      ) : onDownload ? (
+        <button onClick={onDownload} className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">
+          [ DL ]
+        </button>
+      ) : null}
+    </div>
+  );
+
+  if (isChapterDownloaded && readHref) {
+    return (
+      <Link href={readHref} className="block">
+        {row}
+      </Link>
+    );
+  }
+  return <div>{row}</div>;
+}
+
 function Pagination({
   page,
   totalPages,
@@ -158,50 +299,50 @@ export function ChapterDirectory({
   chapters,
   sourceId,
   mangaId,
+  mangaTitle,
   anilistId,
-  currentProgress,
-  downloadedChapters,
-  queueLength,
-  isDownloading,
-  onDownloadChapter,
-  onDownloadAll,
-  onCancelDownload,
   onRefresh,
   isRefreshing,
   isLoadingChapters,
 }: ChapterDirectoryProps) {
+  const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
+    useChapterDownload(mangaId, mangaTitle);
   const [page, setPage] = useState(0);
 
   const hasChapters = chapters && chapters.length > 0;
 
-  // Loading state — show terminal-style progress while fetching chapters
+  const sharedRowProps = {
+    downloaded,
+    isOnShelf,
+    downloadedChapters,
+    currentProgress,
+    anilistId,
+  };
+
+  // Loading state
   if (isLoadingChapters && !hasChapters) {
     return (
-      <div className="border border-terminal-border/40 px-4 py-3">
-        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">
-          --- CHAPTER DIRECTORY ---
-        </div>
+      <DirectoryShell>
         <div className="text-xs space-y-1">
           <div className="text-terminal-dim">{"> "}querying source index...</div>
           <div className="text-terminal-orange">
             {"> "}fetching chapter manifest<span className="blink-cursor">_</span>
           </div>
         </div>
-      </div>
+      </DirectoryShell>
     );
   }
 
-  // Source chapters available — render real episode list
+  // Source chapters available
   if (hasChapters) {
     const sorted = [...chapters].sort((a, b) => (a.datePublished ?? 0) - (b.datePublished ?? 0));
     const totalEpisodes = sorted.length;
     const totalPages = Math.ceil(totalEpisodes / PER_PAGE);
     const start = page * PER_PAGE;
-    const end = Math.min(start + PER_PAGE, totalEpisodes);
-    const slice = sorted.slice(start, end);
+    const slice = sorted.slice(start, Math.min(start + PER_PAGE, totalEpisodes));
 
     const handleDownloadAll = () => {
-      if (!mangaId || !sourceId || !onDownloadAll) return;
+      if (!sourceId) return;
       const items: DownloadQueueItem[] = sorted.map((ch, idx) => ({
         mangaId,
         chapterNum: idx + 1,
@@ -209,57 +350,24 @@ export function ChapterDirectory({
         chapterUrl: ch.url,
         sourceId,
       }));
-      onDownloadAll(items);
+      enqueueMany(items);
     };
 
     return (
-      <div className="border border-terminal-border/40 px-4 py-3">
-        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2 flex items-center justify-between">
-          <span>
-            --- CHAPTER DIRECTORY --- {totalEpisodes} entries
-            {isOnShelf && downloaded > 0 && <span> — {downloaded} cached</span>}
-          </span>
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className={`font-mono ${
-                isRefreshing
-                  ? "text-terminal-orange cursor-wait"
-                  : "text-terminal-cyan hover:text-terminal-green"
-              }`}
-            >
-              {isRefreshing ? "[ SCANNING... ]" : "[ REFRESH ]"}
-            </button>
-          )}
-        </div>
-
-        {/* Download controls */}
-        {mangaId && sourceId && onDownloadAll && (
-          <div className="flex items-center gap-3 mb-2 text-[0.65rem]">
-            {isDownloading ? (
-              <>
-                {currentProgress && (
-                  <span className="text-terminal-orange">
-                    {">"} downloading ch.
-                    {String(currentProgress.chapterNum).padStart(3, "0")}
-                    {currentProgress.state === "downloading" &&
-                      ` [${currentProgress.imagesDownloaded}/${currentProgress.imagesTotal}]`}
-                    {currentProgress.state === "fetching-pages" && " [scanning]"}
-                    {currentProgress.state === "uploading" && " [uploading to db]"}
-                  </span>
-                )}
-                {(queueLength ?? 0) > 1 && <span className="text-terminal-dim">({(queueLength ?? 1) - 1} queued)</span>}
-                <button onClick={onCancelDownload} className="text-red-400 hover:text-red-300">
-                  [ CANCEL ]
-                </button>
-              </>
-            ) : (
-              <button onClick={handleDownloadAll} className="text-terminal-cyan hover:text-terminal-green">
-                [ DOWNLOAD ALL ]
-              </button>
-            )}
-          </div>
+      <DirectoryShell
+        entryCount={totalEpisodes}
+        cached={isOnShelf && downloaded > 0 ? downloaded : undefined}
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
+      >
+        {sourceId && (
+          <DownloadControls
+            isDownloading={isDownloading}
+            currentProgress={currentProgress}
+            queueLength={queue.length}
+            onDownloadAll={handleDownloadAll}
+            onCancel={cancelQueue}
+          />
         )}
 
         {currentProgress?.state === "error" && (
@@ -271,134 +379,68 @@ export function ChapterDirectory({
         <div className="space-y-0">
           {slice.map((ch, idx) => {
             const chapterNum = start + idx + 1;
-            const num = String(chapterNum).padStart(3, "0");
-            const { colorClass, bar, perm, statusLabel } = getChapterStatus(
-              chapterNum,
-              downloaded,
-              isOnShelf,
-              downloadedChapters,
-              currentProgress,
-            );
-
-            const isChapterDownloaded = downloadedChapters?.has(chapterNum);
-            const canDownload = mangaId && sourceId && onDownloadChapter && !isDownloading && !isChapterDownloaded;
-
-            const row = (
-              <div
+            const canDl = sourceId && !isDownloading && !downloadedChapters.has(chapterNum);
+            return (
+              <ChapterRow
                 key={chapterNum}
-                className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}
-              >
-                <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
-                <span className="w-[30px] shrink-0">{num}</span>
-                <span className="truncate flex-1 min-w-0">{ch.title}</span>
-                <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
-                <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
-                {isChapterDownloaded && anilistId ? (
-                  <Link
-                    href={`/manhwa/${anilistId}/read/${chapterNum}`}
-                    className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    [ READ ]
-                  </Link>
-                ) : canDownload ? (
-                  <button
-                    onClick={() =>
-                      onDownloadChapter({
-                        mangaId,
-                        chapterNum,
-                        episodeTitle: ch.title,
-                        chapterUrl: ch.url,
-                        sourceId,
-                      })
-                    }
-                    className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
-                  >
-                    [ DL ]
-                  </button>
-                ) : null}
-              </div>
+                chapterNum={chapterNum}
+                label={ch.title}
+                {...sharedRowProps}
+                onDownload={
+                  canDl
+                    ? () =>
+                        enqueueChapter({
+                          mangaId,
+                          chapterNum,
+                          episodeTitle: ch.title,
+                          chapterUrl: ch.url,
+                          sourceId: sourceId!,
+                        })
+                    : undefined
+                }
+              />
             );
-
-            if (isChapterDownloaded && anilistId) {
-              return (
-                <Link key={chapterNum} href={`/manhwa/${anilistId}/read/${chapterNum}`} className="block">
-                  {row}
-                </Link>
-              );
-            }
-            return row;
           })}
         </div>
 
         <Pagination page={page} totalPages={totalPages} setPage={setPage} />
-      </div>
+      </DirectoryShell>
     );
   }
 
-  // Generated chapter list (fallback when no source chapters available)
+  // Empty — no chapter count available
   const effectiveTotal = totalChapters ?? (isOnShelf && downloaded > 0 ? downloaded : null);
 
   if (effectiveTotal == null || effectiveTotal === 0) {
     return (
-      <div className="border border-terminal-border/40 px-4 py-3">
-        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">--- CHAPTER DIRECTORY ---</div>
+      <DirectoryShell>
         <div className="text-xs text-terminal-dim">{">"} chapter count unknown (ongoing series)</div>
-      </div>
+      </DirectoryShell>
     );
   }
 
+  // Fallback generated list
   const totalPages = Math.ceil(effectiveTotal / PER_PAGE);
   const start = page * PER_PAGE + 1;
   const end = Math.min((page + 1) * PER_PAGE, effectiveTotal);
 
-  const chapterRows = [];
-  for (let i = start; i <= end; i++) {
-    const num = String(i).padStart(3, "0");
-    const { colorClass, bar, perm, statusLabel } = getChapterStatus(i, downloaded, isOnShelf, downloadedChapters);
-    const isChapterDownloaded = downloadedChapters?.has(i);
-
-    const row = (
-      <div
-        className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${isChapterDownloaded && anilistId ? " hover:bg-terminal-row-hover cursor-pointer" : ""}`}
-      >
-        <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
-        <span className="w-[90px] shrink-0">Chapter {num}</span>
-        <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
-        <span className="shrink-0">{statusLabel}</span>
-        {isChapterDownloaded && anilistId && (
-          <Link
-            href={`/manhwa/${anilistId}/read/${i}`}
-            className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            [ READ ]
-          </Link>
-        )}
-      </div>
-    );
-
-    if (isChapterDownloaded && anilistId) {
-      chapterRows.push(
-        <Link key={i} href={`/manhwa/${anilistId}/read/${i}`} className="block">
-          {row}
-        </Link>,
-      );
-    } else {
-      chapterRows.push(<div key={i}>{row}</div>);
-    }
-  }
-
   return (
-    <div className="border border-terminal-border/40 px-4 py-3">
-      <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">
-        --- CHAPTER DIRECTORY --- {effectiveTotal} entries
-        {isOnShelf && downloaded > 0 && <span> — {downloaded} cached</span>}
+    <DirectoryShell entryCount={effectiveTotal} cached={isOnShelf && downloaded > 0 ? downloaded : undefined}>
+      <div className="space-y-0">
+        {Array.from({ length: end - start + 1 }, (_, i) => {
+          const chapterNum = start + i;
+          return (
+            <ChapterRow
+              key={chapterNum}
+              chapterNum={chapterNum}
+              label={`Chapter ${String(chapterNum).padStart(3, "0")}`}
+              {...sharedRowProps}
+            />
+          );
+        })}
       </div>
-
-      <div className="space-y-0">{chapterRows}</div>
 
       <Pagination page={page} totalPages={totalPages} setPage={setPage} />
-    </div>
+    </DirectoryShell>
   );
 }

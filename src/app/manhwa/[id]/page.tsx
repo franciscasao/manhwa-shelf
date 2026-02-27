@@ -10,7 +10,6 @@ import { findSourceLink, type SourceIdentifier } from "@/extensions";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
 import { useSourceChapters } from "@/hooks/use-source-chapters";
-import { useChapterDownload } from "@/hooks/use-chapter-download";
 import { ArrowLeft } from "lucide-react";
 import { ManhwaHeader } from "@/components/manhwa/manhwa-header";
 import { ManhwaMetadata } from "@/components/manhwa/manhwa-metadata";
@@ -37,8 +36,6 @@ export default function ManhwaDetailPage() {
   const { chapters, refresh, isRefreshing, isLoading: isLoadingChapters } = useSourceChapters(activeSource);
 
   const mangaTitle = media?.title?.english || media?.title?.romaji || "Unknown";
-  const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
-    useChapterDownload(toPocketBaseId(id), mangaTitle);
 
   const bootLines = useRef([
     "> initializing file inspector...",
@@ -149,14 +146,8 @@ export default function ManhwaDetailPage() {
                 chapters={chapters}
                 sourceId={activeSource?.sourceId}
                 mangaId={toPocketBaseId(id)}
+                mangaTitle={mangaTitle}
                 anilistId={id}
-                currentProgress={currentProgress}
-                downloadedChapters={downloadedChapters}
-                queueLength={queue.length}
-                isDownloading={isDownloading}
-                onDownloadChapter={enqueueChapter}
-                onDownloadAll={enqueueMany}
-                onCancelDownload={cancelQueue}
                 onRefresh={activeSource ? refresh : undefined}
                 isRefreshing={isRefreshing}
                 isLoadingChapters={isLoadingChapters}
