@@ -67,20 +67,32 @@ class DownloadManager extends EventEmitter {
     const queue = this.queues.get(mangaId);
     if (!queue) return;
 
+    const mangaTitle = queue.mangaTitle;
     queue.abortController.abort();
     this.queues.delete(mangaId);
     this.emit(`progress:${mangaId}`, {
       mangaId,
+      mangaTitle,
       currentChapter: null,
       queuedChapters: [],
       completedChapters: queue.completedChapters,
       isProcessing: false,
     } satisfies MangaProgressSnapshot);
     this.emit(`done:${mangaId}`);
+    this.emit("progress:*", this.getAllActive());
   }
 
   getStatus(mangaId: string): MangaProgressSnapshot | null {
     return this.getSnapshot(mangaId);
+  }
+
+  getAllActive(): MangaProgressSnapshot[] {
+    const snapshots: MangaProgressSnapshot[] = [];
+    for (const mangaId of this.queues.keys()) {
+      const snapshot = this.getSnapshot(mangaId);
+      if (snapshot) snapshots.push(snapshot);
+    }
+    return snapshots;
   }
 
   private getSnapshot(mangaId: string): MangaProgressSnapshot | null {
@@ -89,6 +101,7 @@ class DownloadManager extends EventEmitter {
 
     return {
       mangaId,
+      mangaTitle: queue.mangaTitle,
       currentChapter: queue.currentState,
       queuedChapters: queue.jobs.map((j) => j.chapterNum),
       completedChapters: queue.completedChapters,
@@ -296,8 +309,10 @@ class DownloadManager extends EventEmitter {
     // Queue fully processed
     queue.currentJob = null;
     queue.currentState = null;
+    const mangaTitle = queue.mangaTitle;
     const finalSnapshot: MangaProgressSnapshot = {
       mangaId,
+      mangaTitle,
       currentChapter: null,
       queuedChapters: [],
       completedChapters: queue.completedChapters,
@@ -306,12 +321,14 @@ class DownloadManager extends EventEmitter {
     this.queues.delete(mangaId);
     this.emit(`progress:${mangaId}`, finalSnapshot);
     this.emit(`done:${mangaId}`);
+    this.emit("progress:*", this.getAllActive());
   }
 
   private emitProgress(mangaId: string): void {
     const snapshot = this.getSnapshot(mangaId);
     if (snapshot) {
       this.emit(`progress:${mangaId}`, snapshot);
+      this.emit("progress:*", this.getAllActive());
     }
   }
 }

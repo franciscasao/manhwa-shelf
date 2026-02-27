@@ -45,6 +45,7 @@ export interface ManagedChapterState {
 
 export interface MangaProgressSnapshot {
   mangaId: string;
+  mangaTitle: string;
   currentChapter: ManagedChapterState | null;
   queuedChapters: number[];
   completedChapters: number[];

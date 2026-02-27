@@ -35,6 +35,55 @@ export const downloadRouter = createTRPCRouter({
       return downloadManager.getStatus(input.mangaId);
     }),
 
+  allStatus: baseProcedure
+    .query(() => {
+      return downloadManager.getAllActive();
+    }),
+
+  allProgress: baseProcedure
+    .subscription(async function* ({ signal }) {
+      // Yield current state immediately
+      yield downloadManager.getAllActive();
+
+      const queue: MangaProgressSnapshot[][] = [];
+      let resolve: (() => void) | null = null;
+      let done = false;
+
+      const onProgress = (snapshots: MangaProgressSnapshot[]) => {
+        queue.push(snapshots);
+        resolve?.();
+      };
+
+      downloadManager.on("progress:*", onProgress);
+
+      const cleanup = () => {
+        downloadManager.off("progress:*", onProgress);
+      };
+
+      signal?.addEventListener("abort", () => {
+        done = true;
+        resolve?.();
+      }, { once: true });
+
+      try {
+        while (!done && !signal?.aborted) {
+          if (queue.length > 0) {
+            yield queue.shift()!;
+          } else {
+            await new Promise<void>((r) => {
+              resolve = r;
+            });
+            resolve = null;
+          }
+        }
+        while (queue.length > 0) {
+          yield queue.shift()!;
+        }
+      } finally {
+        cleanup();
+      }
+    }),
+
   progress: baseProcedure
     .input(z.object({ mangaId: z.string().min(1) }))
     .subscription(async function* ({ input, signal }) {

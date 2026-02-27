@@ -3,6 +3,7 @@ import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { Providers } from "@/components/providers";
+import { DownloadManagerPopup } from "@/components/download-manager-popup";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
         <Providers>
           <Navbar />
           {children}
+          <DownloadManagerPopup />
         </Providers>
       </body>
     </html>
