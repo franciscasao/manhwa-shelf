@@ -145,17 +145,21 @@ function DirectoryShell({
   );
 }
 
+const BATCH_SIZES = [5, 10, 15] as const;
+
 function DownloadControls({
   isDownloading,
   currentProgress,
   queueLength,
-  onDownloadAll,
+  remainingCount,
+  onDownloadBatch,
   onCancel,
 }: {
   isDownloading: boolean;
   currentProgress: ChapterProgress | null;
   queueLength: number;
-  onDownloadAll: () => void;
+  remainingCount: number;
+  onDownloadBatch: (count?: number) => void;
   onCancel: () => void;
 }) {
   return (
@@ -178,9 +182,22 @@ function DownloadControls({
           </button>
         </>
       ) : (
-        <button onClick={onDownloadAll} className="text-terminal-cyan hover:text-terminal-green">
-          [ DOWNLOAD ALL ]
-        </button>
+        <>
+          {BATCH_SIZES.filter((n) => n < remainingCount).map((n) => (
+            <button
+              key={n}
+              onClick={() => onDownloadBatch(n)}
+              className="text-terminal-cyan hover:text-terminal-green"
+            >
+              [ DL {n} ]
+            </button>
+          ))}
+          {remainingCount > 0 && (
+            <button onClick={() => onDownloadBatch()} className="text-terminal-cyan hover:text-terminal-green">
+              [ DL ALL ]
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -341,11 +358,16 @@ export function ChapterDirectory({
     const start = page * PER_PAGE;
     const slice = sorted.slice(start, Math.min(start + PER_PAGE, totalEpisodes));
 
-    const handleDownloadAll = () => {
+    const undownloaded = sorted
+      .map((ch, idx) => ({ ch, chapterNum: idx + 1 }))
+      .filter(({ chapterNum }) => !downloadedChapters.has(chapterNum));
+
+    const handleDownloadBatch = (count?: number) => {
       if (!sourceId) return;
-      const items: DownloadQueueItem[] = sorted.map((ch, idx) => ({
+      const batch = count != null ? undownloaded.slice(0, count) : undownloaded;
+      const items: DownloadQueueItem[] = batch.map(({ ch, chapterNum }) => ({
         mangaId,
-        chapterNum: idx + 1,
+        chapterNum,
         episodeTitle: ch.title,
         chapterUrl: ch.url,
         sourceId,
@@ -365,7 +387,8 @@ export function ChapterDirectory({
             isDownloading={isDownloading}
             currentProgress={currentProgress}
             queueLength={queue.length}
-            onDownloadAll={handleDownloadAll}
+            remainingCount={undownloaded.length}
+            onDownloadBatch={handleDownloadBatch}
             onCancel={cancelQueue}
           />
         )}

@@ -35,6 +35,22 @@ export type DownloadStreamEvent =
   | { type: "complete"; recordId: string; sizeBytes: number }
   | { type: "error"; message: string };
 
+export interface ManagedChapterState {
+  chapterNum: number;
+  state: "queued" | "fetching-pages" | "downloading" | "uploading" | "complete" | "error";
+  imagesDownloaded: number;
+  imagesTotal: number;
+  error?: string;
+}
+
+export interface MangaProgressSnapshot {
+  mangaId: string;
+  currentChapter: ManagedChapterState | null;
+  queuedChapters: number[];
+  completedChapters: number[];
+  isProcessing: boolean;
+}
+
 export type SortValue = "title" | "rating" | "chapters" | "size" | "updated";
 export type FilterValue = "all" | "complete" | "partial" | "not-downloaded";
 export type ViewMode = "grid" | "list";
