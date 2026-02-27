@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchManhwaById, type AniListMediaDetail } from "@/lib/anilist";
+import { useTRPC } from "@/trpc/client";
 
 export function useMediaDetail(id: number) {
-  const result = useQuery<AniListMediaDetail>({
-    queryKey: ["mediaDetail", id],
-    queryFn: () => fetchManhwaById(id),
+  const trpc = useTRPC();
+
+  const result = useQuery({
+    ...trpc.anilist.fetchById.queryOptions({ id }),
     enabled: !isNaN(id) && id > 0,
   });
 

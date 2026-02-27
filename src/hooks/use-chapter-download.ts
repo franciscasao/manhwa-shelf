@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { pb } from "@/lib/db";
+import { useTRPCClient } from "@/trpc/client";
 import { downloadChapterToServer } from "@/lib/chapter-download";
 import type {
   ChapterDownloadState,
@@ -10,6 +11,7 @@ import type {
 } from "@/lib/types";
 
 export function useChapterDownload(mangaId: string, mangaTitle: string) {
+  const trpcClient = useTRPCClient();
   const [queue, setQueue] = useState<DownloadQueueItem[]>([]);
   const [currentProgress, setCurrentProgress] = useState<ChapterProgress | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -93,6 +95,7 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
 
         try {
           await downloadChapterToServer(
+            trpcClient,
             mangaId,
             mangaTitle,
             item.chapterNum,
@@ -150,7 +153,7 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
         setCurrentProgress(null);
       }
     },
-    [mangaId, mangaTitle],
+    [trpcClient, mangaId, mangaTitle],
   );
 
   const enqueueChapter = useCallback(

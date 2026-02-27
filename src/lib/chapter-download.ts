@@ -1,3 +1,5 @@
+import type { TRPCClient } from "@trpc/client";
+import type { AppRouter } from "@/trpc/routers/_app";
 import type { DownloadStreamEvent } from "@/lib/types";
 
 export interface DownloadResult {
@@ -6,6 +8,7 @@ export interface DownloadResult {
 }
 
 export async function downloadChapterToServer(
+  trpcClient: TRPCClient<AppRouter>,
   mangaId: string,
   mangaTitle: string,
   chapterNum: number,
@@ -16,61 +19,56 @@ export async function downloadChapterToServer(
   onUploading?: () => void,
   signal?: AbortSignal,
 ): Promise<DownloadResult> {
-  const res = await fetch("/api/source/download", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sourceId, mangaId, mangaTitle, chapterNum, chapterUrl, episodeTitle }),
-    signal,
-  });
-
-  if (!res.ok) {
-    throw new Error(`Download request failed: ${res.status}`);
-  }
-
-  if (!res.body) {
-    throw new Error("No response body");
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let result: DownloadResult | null = null;
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    // Keep the last incomplete line in the buffer
-    buffer = lines.pop() ?? "";
-
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const event: DownloadStreamEvent = JSON.parse(line);
-
-      switch (event.type) {
-        case "pages":
-          onProgress?.(0, event.total);
-          break;
-        case "progress":
-          onProgress?.(event.downloaded, event.total);
-          break;
-        case "uploading":
-          onUploading?.();
-          break;
-        case "complete":
-          result = { recordId: event.recordId, sizeBytes: event.sizeBytes };
-          break;
-        case "error":
-          throw new Error(event.message);
-      }
+  return new Promise<DownloadResult>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error("Download cancelled"));
+      return;
     }
-  }
 
-  if (!result) {
-    throw new Error("Stream ended without completion event");
-  }
+    const subscription = trpcClient.download.downloadChapter.subscribe(
+      {
+        sourceId,
+        mangaId,
+        mangaTitle,
+        chapterNum,
+        chapterUrl,
+        episodeTitle,
+      },
+      {
+        onData(event: DownloadStreamEvent) {
+          switch (event.type) {
+            case "pages":
+              onProgress?.(0, event.total);
+              break;
+            case "progress":
+              onProgress?.(event.downloaded, event.total);
+              break;
+            case "uploading":
+              onUploading?.();
+              break;
+            case "complete":
+              subscription.unsubscribe();
+              resolve({ recordId: event.recordId, sizeBytes: event.sizeBytes });
+              break;
+            case "error":
+              subscription.unsubscribe();
+              reject(new Error(event.message));
+              break;
+          }
+        },
+        onError(err) {
+          reject(err instanceof Error ? err : new Error("Subscription failed"));
+        },
+        onComplete() {
+          // If we reach here without a complete event, it's unexpected
+        },
+      },
+    );
 
-  return result;
+    // Handle abort signal
+    signal?.addEventListener("abort", () => {
+      subscription.unsubscribe();
+      reject(new Error("Download cancelled"));
+    }, { once: true });
+  });
 }

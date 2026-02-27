@@ -2,16 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-
-interface ChapterData {
-  recordId: string;
-  collectionId: string;
-  images: string[];
-  episodeTitle: string;
-  chapterNum: number;
-  prevChapter: number | null;
-  nextChapter: number | null;
-}
+import { useTRPC } from "@/trpc/client";
 
 export interface ChapterReaderData {
   imageUrls: string[];
@@ -21,38 +12,33 @@ export interface ChapterReaderData {
   nextChapter: number | null;
 }
 
-async function fetchChapter(
-  mangaId: string,
-  chapterNum: number,
-): Promise<ChapterReaderData> {
-  const res = await fetch(`/api/chapter/${mangaId}/${chapterNum}`);
-  if (!res.ok) {
-    throw new Error(res.status === 404 ? "Chapter not found" : "Failed to load chapter");
-  }
-
-  const data: ChapterData = await res.json();
-  const baseUrl = process.env.NEXT_PUBLIC_POCKETBASE_URL ?? "http://127.0.0.1:8090";
-
-  const imageUrls = data.images.map(
+function buildImageUrls(data: {
+  recordId: string;
+  collectionId: string;
+  images: string[];
+}): string[] {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_POCKETBASE_URL ?? "http://127.0.0.1:8090";
+  return data.images.map(
     (filename) =>
       `${baseUrl}/api/files/${data.collectionId}/${data.recordId}/${filename}`,
   );
-
-  return {
-    imageUrls,
-    episodeTitle: data.episodeTitle,
-    chapterNum: data.chapterNum,
-    prevChapter: data.prevChapter,
-    nextChapter: data.nextChapter,
-  };
 }
 
 export function useChapterReader(mangaId: string, chapterNum: number) {
-  const result = useQuery<ChapterReaderData>({
-    queryKey: ["chapterReader", mangaId, chapterNum],
-    queryFn: () => fetchChapter(mangaId, chapterNum),
+  const trpc = useTRPC();
+
+  const result = useQuery({
+    ...trpc.chapter.getReader.queryOptions({ mangaId, chapterNum }),
     enabled: !!mangaId && chapterNum > 0,
     staleTime: Infinity,
+    select: (data): ChapterReaderData => ({
+      imageUrls: buildImageUrls(data),
+      episodeTitle: data.episodeTitle,
+      chapterNum: data.chapterNum,
+      prevChapter: data.prevChapter,
+      nextChapter: data.nextChapter,
+    }),
   });
 
   return {
@@ -64,16 +50,15 @@ export function useChapterReader(mangaId: string, chapterNum: number) {
 
 /** Prefetch a chapter into React Query cache so navigation is instant */
 export function usePrefetchChapter(mangaId: string, chapterNum: number | null) {
+  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const prefetch = useCallback(() => {
     if (!mangaId || !chapterNum || chapterNum <= 0) return;
-    queryClient.prefetchQuery({
-      queryKey: ["chapterReader", mangaId, chapterNum],
-      queryFn: () => fetchChapter(mangaId, chapterNum),
-      staleTime: Infinity,
-    });
-  }, [queryClient, mangaId, chapterNum]);
+    queryClient.prefetchQuery(
+      trpc.chapter.getReader.queryOptions({ mangaId, chapterNum }),
+    );
+  }, [queryClient, trpc, mangaId, chapterNum]);
 
   return prefetch;
 }

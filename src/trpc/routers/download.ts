@@ -1,55 +1,44 @@
-import { NextRequest } from "next/server";
+import { z } from "zod";
+import { createTRPCRouter, baseProcedure } from "@/trpc/init";
 import { getSource } from "@/extensions";
-import { getServerPB } from "@/lib/db-server";
+import { TRPCError } from "@trpc/server";
 import type { DownloadStreamEvent } from "@/lib/types";
 
-export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { sourceId, mangaId, chapterNum, chapterUrl, episodeTitle } = body as {
-    sourceId: string;
-    mangaId: string;
-    mangaTitle: string;
-    chapterNum: number;
-    chapterUrl: string;
-    episodeTitle?: string;
-  };
+export const downloadRouter = createTRPCRouter({
+  downloadChapter: baseProcedure
+    .input(
+      z.object({
+        sourceId: z.string().min(1),
+        mangaId: z.string().min(1),
+        mangaTitle: z.string(),
+        chapterNum: z.number().int().positive(),
+        chapterUrl: z.string().min(1),
+        episodeTitle: z.string().optional().default(""),
+      }),
+    )
+    .subscription(async function* ({ ctx, input, signal }) {
+      const source = getSource(input.sourceId);
+      if (!source) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Unknown source: ${input.sourceId}`,
+        });
+      }
 
-  if (!sourceId || !mangaId || !chapterNum || !chapterUrl) {
-    return new Response(
-      JSON.stringify({ type: "error", message: "Missing required fields" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
-  }
-
-  const source = getSource(sourceId);
-  if (!source) {
-    return new Response(
-      JSON.stringify({ type: "error", message: `Unknown source: ${sourceId}` }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
-  }
-
-  let cancelled = false;
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      const send = (event: DownloadStreamEvent) => {
-        controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
-      };
+      const { pb } = ctx;
+      const { mangaId, chapterNum, chapterUrl, episodeTitle } = input;
 
       try {
         // 1. Fetch page images from the source extension
         const pages = await source.fetchChapterPages(chapterUrl);
 
         if (pages.length === 0) {
-          send({ type: "error", message: "No images found in chapter" });
-          controller.close();
+          yield { type: "error" as const, message: "No images found in chapter" };
           return;
         }
 
         const total = pages.length;
-        send({ type: "pages", total });
+        yield { type: "pages" as const, total };
 
         // 2. Download images in batches of 3
         const imageData: { buffer: Uint8Array; contentType: string }[] = [];
@@ -57,11 +46,7 @@ export async function POST(request: NextRequest) {
         let downloaded = 0;
 
         for (let i = 0; i < pages.length; i += batchSize) {
-          if (cancelled) {
-            send({ type: "error", message: "Download cancelled" });
-            controller.close();
-            return;
-          }
+          if (signal?.aborted) return;
 
           const batch = pages.slice(i, i + batchSize);
           const results = await Promise.all(
@@ -82,16 +67,14 @@ export async function POST(request: NextRequest) {
           for (const { buffer, contentType } of results) {
             imageData.push({ buffer: new Uint8Array(buffer), contentType });
             downloaded++;
-            send({ type: "progress", downloaded, total });
+            yield { type: "progress" as const, downloaded, total };
           }
         }
 
         // 3. Upload individual images to PocketBase
         const sizeBytes = imageData.reduce((sum, img) => sum + img.buffer.byteLength, 0);
 
-        send({ type: "uploading" });
-
-        const pb = getServerPB();
+        yield { type: "uploading" as const };
 
         // Dedup: check if this chapter already exists
         const existing = await pb
@@ -105,7 +88,7 @@ export async function POST(request: NextRequest) {
         const formData = new FormData();
         formData.append("mangaId", mangaId);
         formData.append("chapterNum", String(chapterNum));
-        formData.append("episodeTitle", episodeTitle ?? "");
+        formData.append("episodeTitle", episodeTitle);
         formData.append("sizeBytes", String(sizeBytes));
         formData.append("downloadedAt", String(Date.now()));
 
@@ -164,26 +147,12 @@ export async function POST(request: NextRequest) {
           // Shelf entry may not exist
         }
 
-        send({ type: "complete", recordId, sizeBytes });
+        yield { type: "complete" as const, recordId, sizeBytes } satisfies DownloadStreamEvent;
       } catch (err) {
-        send({
-          type: "error",
+        yield {
+          type: "error" as const,
           message: err instanceof Error ? err.message : "Download failed",
-        });
-      } finally {
-        controller.close();
+        } satisfies DownloadStreamEvent;
       }
-    },
-    cancel() {
-      cancelled = true;
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "application/x-ndjson",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
-}
+    }),
+});

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { searchMedia, type SearchResult } from "@/lib/anilist";
+import { useTRPC } from "@/trpc/client";
 import type { SearchOrigin } from "@/lib/types";
 
 export function useSearchMedia(
@@ -11,6 +11,7 @@ export function useSearchMedia(
   page: number,
   isAdult: boolean = false,
 ) {
+  const trpc = useTRPC();
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const loadStartRef = useRef<number | null>(null);
   const [queryMs, setQueryMs] = useState<number | null>(null);
@@ -25,12 +26,19 @@ export function useSearchMedia(
   const trimmed = debouncedQuery.trim();
   const enabled = trimmed.length >= 2;
 
-  const result = useQuery<SearchResult>({
-    queryKey: ["searchMedia", trimmed, origin, page, isAdult],
-    queryFn: async () => {
+  const opts = trpc.anilist.search.queryOptions({
+    query: trimmed,
+    origin,
+    page,
+    isAdult,
+  });
+
+  const result = useQuery({
+    ...opts,
+    queryFn: async (context) => {
       loadStartRef.current = Date.now();
       setQueryMs(null);
-      const data = await searchMedia(trimmed, origin, page, 20, isAdult);
+      const data = await opts.queryFn!(context);
       setQueryMs(Date.now() - (loadStartRef.current ?? Date.now()));
       loadStartRef.current = null;
       return data;
