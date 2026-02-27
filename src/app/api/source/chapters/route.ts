@@ -6,18 +6,12 @@ export async function GET(request: NextRequest) {
   const seriesId = request.nextUrl.searchParams.get("seriesId");
 
   if (!sourceId || !seriesId) {
-    return NextResponse.json(
-      { error: "Missing sourceId or seriesId parameter" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Missing sourceId or seriesId parameter" }, { status: 400 });
   }
 
   const source = getSource(sourceId);
   if (!source) {
-    return NextResponse.json(
-      { error: `Unknown source: ${sourceId}` },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: `Unknown source: ${sourceId}` }, { status: 400 });
   }
 
   try {

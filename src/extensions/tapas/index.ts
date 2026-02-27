@@ -1,10 +1,4 @@
-import type {
-  Source,
-  SourceIdentifier,
-  SourceChapter,
-  SourcePage,
-  SourceMangaDetails,
-} from "../types";
+import type { Source, SourceIdentifier, SourceChapter, SourcePage, SourceMangaDetails } from "../types";
 import { registerSource } from "../registry";
 
 /**
@@ -18,8 +12,7 @@ import { registerSource } from "../registry";
  * @see https://github.com/keiyoushi/extensions-source/tree/main/src/en/tapastic
  */
 
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0";
+const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0";
 
 const TAPAS_HEADERS: Record<string, string> = {
   "User-Agent": USER_AGENT,
@@ -70,6 +63,19 @@ interface TapasChapterListResponse {
   };
 }
 
+async function resolveNumericId(slug: string, headers: Record<string, string>): Promise<string> {
+  if (/^\d+$/.test(slug)) return slug;
+
+  const res = await fetch(`https://tapas.io/series/${slug}`, { headers });
+  if (!res.ok) throw new Error(`Tapas series page returned ${res.status}`);
+
+  const html = await res.text();
+  const match = html.match(/series\/(\d+)/);
+  if (!match) throw new Error(`Could not resolve Tapas series ID for "${slug}"`);
+
+  return match[1];
+}
+
 const tapas: Source = {
   id: "tapas",
   name: "Tapas",
@@ -82,10 +88,7 @@ const tapas: Source = {
     Referer: "https://tapas.io/",
   },
 
-  imageDomains: [
-    "tapas.io",
-    "d30womf5coomej.cloudfront.net",
-  ],
+  imageDomains: ["tapas.io", "d30womf5coomej.cloudfront.net"],
 
   parseUrl(url: string): SourceIdentifier | null {
     try {
@@ -107,13 +110,14 @@ const tapas: Source = {
   },
 
   async fetchChapterList(seriesId: string): Promise<SourceChapter[]> {
+    const numericId = await resolveNumericId(seriesId, this.headers);
     const chapters: SourceChapter[] = [];
     let page = 1;
     let hasMore = true;
 
     while (hasMore) {
       const url =
-        `${this.baseUrl}/series/${seriesId}/episodes` +
+        `${this.baseUrl}/series/${numericId}/episodes` +
         `?page=${page}` +
         `&sort=OLDEST` +
         `&since=${Date.now()}` +
@@ -137,9 +141,7 @@ const tapas: Source = {
           number: ep.scene,
           title: ep.title,
           url: `${this.baseUrl}/episode/${ep.id}`,
-          datePublished: ep.publish_date
-            ? new Date(ep.publish_date).getTime()
-            : null,
+          datePublished: ep.publish_date ? new Date(ep.publish_date).getTime() : null,
           isLocked: !ep.free && !ep.unlocked,
         });
       }
@@ -171,10 +173,7 @@ const tapas: Source = {
 
     // Extract content images: <img class="content__img" data-src="..." />
     // Matches both class="content__img" and class="content__img lazy"
-    const imgTags = selectAll(
-      html,
-      /<img[^>]+class="[^"]*content__img[^"]*"[^>]*>/gi,
-    );
+    const imgTags = selectAll(html, /<img[^>]+class="[^"]*content__img[^"]*"[^>]*>/gi);
 
     const pages: SourcePage[] = [];
 
@@ -184,9 +183,7 @@ const tapas: Source = {
       if (!url) continue;
 
       // Resolve relative URLs
-      const absoluteUrl = url.startsWith("/")
-        ? `${this.baseUrl}${url}`
-        : url;
+      const absoluteUrl = url.startsWith("/") ? `${this.baseUrl}${url}` : url;
 
       pages.push({ url: absoluteUrl });
     }
@@ -209,40 +206,25 @@ const tapas: Source = {
     const html = await res.text();
 
     // Title: <div class="info__right"><div class="title">...</div></div>
-    const title = selectText(
-      html,
-      /class="info__right"[^>]*>[\s\S]*?class="title"[^>]*>([^<]+)</,
-    );
+    const title = selectText(html, /class="info__right"[^>]*>[\s\S]*?class="title"[^>]*>([^<]+)</);
 
     // Cover image
-    const thumbMatch = html.match(
-      /class="[^"]*thumb[^"]*js-thumbnail[^"]*"[^>]*>[\s\S]*?<img[^>]+src="([^"]+)"/,
-    );
+    const thumbMatch = html.match(/class="[^"]*thumb[^"]*js-thumbnail[^"]*"[^>]*>[\s\S]*?<img[^>]+src="([^"]+)"/);
     const coverUrl = thumbMatch?.[1] ?? "";
 
     // Description
-    const description = selectText(
-      html,
-      /class="description__body"[^>]*>([\s\S]*?)<\/(?:p|div)>/,
-    );
+    const description = selectText(html, /class="description__body"[^>]*>([\s\S]*?)<\/(?:p|div)>/);
 
     // Genres: <a class="genre-btn">...</a>
     const genreTags = selectAll(html, /class="genre-btn"[^>]*>[^<]+</gi);
-    const genres = genreTags
-      .map((tag) => tag.replace(/.*>/, "").replace(/<.*/, "").trim())
-      .filter(Boolean);
+    const genres = genreTags.map((tag) => tag.replace(/.*>/, "").replace(/<.*/, "").trim()).filter(Boolean);
 
     // Author: <a class="name ...">...</a> inside .creator-section
-    const authorSection = html.match(
-      /class="creator-section"[\s\S]*?class="name[^"]*"[^>]*>([^<]+)</,
-    );
+    const authorSection = html.match(/class="creator-section"[\s\S]*?class="name[^"]*"[^>]*>([^<]+)</);
     const author = authorSection?.[1]?.trim() ?? "Unknown";
 
     // Status from schedule label
-    const scheduleLabel = selectText(
-      html,
-      /class="schedule-label"[^>]*>([^<]+)</,
-    );
+    const scheduleLabel = selectText(html, /class="schedule-label"[^>]*>([^<]+)</);
     let status: SourceMangaDetails["status"] = "unknown";
     if (/updates/i.test(scheduleLabel)) status = "ongoing";
     else if (/completed/i.test(scheduleLabel)) status = "completed";
