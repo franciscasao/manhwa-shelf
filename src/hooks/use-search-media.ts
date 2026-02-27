@@ -5,12 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 import type { SearchOrigin } from "@/lib/types";
 
-export function useSearchMedia(
-  query: string,
-  origin: SearchOrigin,
-  page: number,
-  isAdult: boolean = false,
-) {
+export function useSearchMedia(query: string, origin: SearchOrigin, page: number, isAdult: boolean = false) {
   const trpc = useTRPC();
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const loadStartRef = useRef<number | null>(null);

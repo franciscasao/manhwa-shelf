@@ -64,6 +64,24 @@ async function main() {
       updateRule: "",
       deleteRule: "",
     },
+    {
+      name: "chapterCache",
+      type: "base",
+      fields: [
+        { name: "sourceId", type: "text", required: true },
+        { name: "seriesId", type: "text", required: true },
+        { name: "chapters", type: "json", required: true },
+        { name: "cachedAt", type: "number", required: true },
+      ],
+      indexes: [
+        "CREATE UNIQUE INDEX idx_chapterCache_source ON chapterCache (sourceId, seriesId)",
+      ],
+      listRule: "",
+      viewRule: "",
+      createRule: "",
+      updateRule: "",
+      deleteRule: "",
+    },
   ];
 
   console.log("Importing collections...");

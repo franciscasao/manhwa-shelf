@@ -34,7 +34,7 @@ export default function ManhwaDetailPage() {
   const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
 
   const activeSource = media ? findActiveSource(media.externalLinks) : null;
-  const { chapters } = useSourceChapters(activeSource);
+  const { chapters, refresh, isRefreshing, isLoading: isLoadingChapters } = useSourceChapters(activeSource);
 
   const mangaTitle = media?.title?.english || media?.title?.romaji || "Unknown";
   const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
@@ -157,6 +157,9 @@ export default function ManhwaDetailPage() {
                 onDownloadChapter={enqueueChapter}
                 onDownloadAll={enqueueMany}
                 onCancelDownload={cancelQueue}
+                onRefresh={activeSource ? refresh : undefined}
+                isRefreshing={isRefreshing}
+                isLoadingChapters={isLoadingChapters}
               />
             </div>
 

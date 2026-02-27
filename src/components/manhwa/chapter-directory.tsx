@@ -20,6 +20,9 @@ interface ChapterDirectoryProps {
   onDownloadChapter?: (item: DownloadQueueItem) => void;
   onDownloadAll?: (items: DownloadQueueItem[]) => void;
   onCancelDownload?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+  isLoadingChapters?: boolean;
 }
 
 const PER_PAGE = 50;
@@ -163,10 +166,30 @@ export function ChapterDirectory({
   onDownloadChapter,
   onDownloadAll,
   onCancelDownload,
+  onRefresh,
+  isRefreshing,
+  isLoadingChapters,
 }: ChapterDirectoryProps) {
   const [page, setPage] = useState(0);
 
   const hasChapters = chapters && chapters.length > 0;
+
+  // Loading state — show terminal-style progress while fetching chapters
+  if (isLoadingChapters && !hasChapters) {
+    return (
+      <div className="border border-terminal-border/40 px-4 py-3">
+        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">
+          --- CHAPTER DIRECTORY ---
+        </div>
+        <div className="text-xs space-y-1">
+          <div className="text-terminal-dim">{"> "}querying source index...</div>
+          <div className="text-terminal-orange">
+            {"> "}fetching chapter manifest<span className="blink-cursor">_</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Source chapters available — render real episode list
   if (hasChapters) {
@@ -191,9 +214,24 @@ export function ChapterDirectory({
 
     return (
       <div className="border border-terminal-border/40 px-4 py-3">
-        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2">
-          --- CHAPTER DIRECTORY --- {totalEpisodes} entries
-          {isOnShelf && downloaded > 0 && <span> — {downloaded} cached</span>}
+        <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-2 flex items-center justify-between">
+          <span>
+            --- CHAPTER DIRECTORY --- {totalEpisodes} entries
+            {isOnShelf && downloaded > 0 && <span> — {downloaded} cached</span>}
+          </span>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className={`font-mono ${
+                isRefreshing
+                  ? "text-terminal-orange cursor-wait"
+                  : "text-terminal-cyan hover:text-terminal-green"
+              }`}
+            >
+              {isRefreshing ? "[ SCANNING... ]" : "[ REFRESH ]"}
+            </button>
+          )}
         </div>
 
         {/* Download controls */}
