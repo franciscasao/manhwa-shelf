@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import { getSource } from "@/extensions";
 import { getServerPB } from "@/lib/db-server";
+import { optimizeImage } from "@/lib/image-optimize";
 import type { ManagedChapterState, MangaProgressSnapshot } from "@/lib/types";
 
 interface DownloadJob {
@@ -193,7 +194,8 @@ class DownloadManager extends EventEmitter {
           );
 
           for (const { buffer, contentType } of results) {
-            imageData.push({ buffer: new Uint8Array(buffer), contentType });
+            const optimized = await optimizeImage(new Uint8Array(buffer), contentType);
+            imageData.push(optimized);
             downloaded++;
             queue.currentState = {
               chapterNum: job.chapterNum,
@@ -233,7 +235,7 @@ class DownloadManager extends EventEmitter {
 
         for (let i = 0; i < imageData.length; i++) {
           const { buffer, contentType } = imageData[i];
-          const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+          const ext = contentType.includes("gif") ? "gif" : contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
           const fileName = `${String(i + 1).padStart(3, "0")}.${ext}`;
           formData.append("images", new Blob([buffer.buffer as ArrayBuffer], { type: contentType }), fileName);
         }
