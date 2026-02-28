@@ -10,8 +10,12 @@ import { MangaTerminalCard } from "@/components/manga-terminal-card";
 import { TerminalPagination } from "@/components/terminal-pagination";
 import { SearchOrigin } from "@/lib/types";
 
-const ORIGIN_OPTIONS: Array<{ value: SearchOrigin; flag: string; label: string }> = [
-  { value: "ALL", flag: "--all", label: "MANGA/MANHWA" },
+const ORIGIN_OPTIONS: Array<{
+  value: SearchOrigin;
+  flag: string;
+  label: string;
+}> = [
+  { value: "ALL", flag: "--all", label: "MANGA/MANHWA/MANHUA" },
   { value: "KR", flag: "--manhwa (KR)", label: "MANHWA" },
   { value: "JP", flag: "--manga (JP)", label: "MANGA" },
   { value: "CN", flag: "--manhua (CN)", label: "MANHUA" },
@@ -63,7 +67,8 @@ function SearchPageInner() {
   const { results, pageInfo, isLoading, error, hasSearched, queryMs } =
     useSearchMedia(query, origin, currentPage, showAdult);
 
-  const originLabel = ORIGIN_OPTIONS.find((o) => o.value === origin)?.label ?? origin;
+  const originLabel =
+    ORIGIN_OPTIONS.find((o) => o.value === origin)?.label ?? origin;
 
   useEffect(() => {
     inputRef.current?.focus();

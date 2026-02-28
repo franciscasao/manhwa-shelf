@@ -65,16 +65,16 @@ async function main() {
       deleteRule: "@request.auth.id != ''",
     },
     {
-      name: "webtoonCache",
+      name: "chapterCache",
       type: "base",
       fields: [
-        { name: "titleId", type: "text", required: true },
-        { name: "type", type: "text" },
-        { name: "episodes", type: "json", maxSize: 20000000 },
-        { name: "fetchedAt", type: "number" },
+        { name: "sourceId", type: "text", required: true },
+        { name: "seriesId", type: "text", required: true },
+        { name: "chapters", type: "json", required: true },
+        { name: "cachedAt", type: "number", required: true },
       ],
       indexes: [
-        "CREATE UNIQUE INDEX idx_webtoonCache_titleId ON webtoonCache (titleId)",
+        "CREATE UNIQUE INDEX idx_chapterCache_source ON chapterCache (sourceId, seriesId)",
       ],
       listRule: "@request.auth.id != ''",
       viewRule: "@request.auth.id != ''",

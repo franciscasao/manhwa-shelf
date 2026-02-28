@@ -1,4 +1,4 @@
-import { Manga, MangaOrigin, SearchOrigin } from "@/lib/types";
+import { Manga, MangaOrigin } from "@/lib/types";
 import { toPocketBaseId } from "@/lib/manga-utils";
 
 export interface AniListMedia {
@@ -28,6 +28,12 @@ export interface AniListExternalLink {
   language: string | null;
   icon: string | null;
   color: string | null;
+}
+
+/** Filter external links to only English (or null-language), non-social links. */
+export function getEnglishLinks(links: AniListExternalLink[] | null | undefined): AniListExternalLink[] {
+  if (!links) return [];
+  return links.filter((link) => (link.language === "English" || link.language === null) && link.type !== "SOCIAL");
 }
 
 export interface AniListMediaDetail extends AniListMedia {
@@ -68,144 +74,10 @@ export interface SearchResult {
   pageInfo: PageInfo;
 }
 
-const SEARCH_QUERY = `
-  query SearchMedia($search: String!, $countryOfOrigin: CountryCode, $page: Int, $perPage: Int, $isAdult: Boolean) {
-    Page(page: $page, perPage: $perPage) {
-      pageInfo { currentPage lastPage hasNextPage total }
-      media(search: $search, format: MANGA, countryOfOrigin: $countryOfOrigin, isAdult: $isAdult, sort: SEARCH_MATCH) {
-        id
-        title { english romaji }
-        coverImage { large }
-        countryOfOrigin
-        genres
-        averageScore
-        chapters
-        isAdult
-        staff(sort: RELEVANCE) {
-          nodes { name { full } }
-          edges { role node { name { full } } }
-        }
-      }
-    }
-  }
-`;
-
-export async function searchMedia(
-  query: string,
-  origin: SearchOrigin = "KR",
-  page = 1,
-  perPage = 20,
-  isAdult = false,
-): Promise<SearchResult> {
-  const variables: Record<string, unknown> = { search: query, page, perPage, isAdult };
-  if (origin !== "ALL") {
-    variables.countryOfOrigin = origin;
-  }
-
-  const res = await fetch("/api/anilist", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query: SEARCH_QUERY,
-      variables,
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Search failed: ${res.status}`);
-  }
-
-  const json = await res.json();
-  const pageData = json.data?.Page;
-  const rawPageInfo = pageData?.pageInfo;
-  return {
-    media: pageData?.media ?? [],
-    pageInfo: {
-      currentPage: rawPageInfo?.currentPage ?? page,
-      lastPage: rawPageInfo?.lastPage ?? 1,
-      hasNextPage: rawPageInfo?.hasNextPage ?? false,
-      total: rawPageInfo?.total ?? 0,
-    },
-  };
-}
-
-export async function searchManhwa(
-  query: string,
-  page = 1,
-  perPage = 20,
-): Promise<SearchResult> {
-  return searchMedia(query, "KR", page, perPage);
-}
-
-const DETAIL_QUERY = `
-  query GetMedia($id: Int!) {
-    Media(id: $id, type: MANGA) {
-      id
-      title { english romaji }
-      coverImage { large }
-      bannerImage
-      countryOfOrigin
-      genres
-      tags { name rank }
-      averageScore
-      popularity
-      favourites
-      chapters
-      volumes
-      status
-      description(asHtml: false)
-      source
-      startDate { year month day }
-      endDate { year month day }
-      staff(sort: RELEVANCE) {
-        nodes { name { full } }
-        edges { role node { name { full } } }
-      }
-      externalLinks { url site type language icon color }
-      relations {
-        edges {
-          relationType
-          node {
-            id
-            title { english romaji }
-            format
-            coverImage { large }
-            type
-          }
-        }
-      }
-    }
-  }
-`;
-
-export async function fetchManhwaById(id: number): Promise<AniListMediaDetail> {
-  const res = await fetch("/api/anilist", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      query: DETAIL_QUERY,
-      variables: { id },
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Fetch failed: ${res.status}`);
-  }
-
-  const json = await res.json();
-  const media = json.data?.Media;
-  if (!media) throw new Error("Media not found");
-  return media;
-}
-
 export function mapAniListToManga(media: AniListMedia, origin?: MangaOrigin): Manga {
-  const resolvedOrigin: MangaOrigin =
-    origin ?? (media.countryOfOrigin as MangaOrigin) ?? "KR";
-  const storyEdge = media.staff.edges.find(
-    (e) => e.role === "Story" || e.role === "Story & Art",
-  );
-  const author =
-    storyEdge?.node.name.full ?? media.staff.nodes[0]?.name.full ?? "Unknown";
+  const resolvedOrigin: MangaOrigin = origin ?? (media.countryOfOrigin as MangaOrigin) ?? "KR";
+  const storyEdge = media.staff.edges.find((e) => e.role === "Story" || e.role === "Story & Art");
+  const author = storyEdge?.node.name.full ?? media.staff.nodes[0]?.name.full ?? "Unknown";
 
   return {
     id: toPocketBaseId(media.id),
