@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const emailRef = useRef<HTMLInputElement>(null);
@@ -33,11 +34,13 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setSubmitting(true);
 
     try {
       if (mode === "login") {
         await login(email, password);
+        router.replace("/");
       } else {
         if (password !== passwordConfirm) {
           setError("Passwords do not match.");
@@ -50,8 +53,13 @@ export default function LoginPage() {
           return;
         }
         await register(email, password, passwordConfirm);
+        setSuccessMessage(
+          "Account created. An administrator must verify your account before you can log in.",
+        );
+        setMode("login");
+        setPassword("");
+        setPasswordConfirm("");
       }
-      router.replace("/");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Authentication failed.";
@@ -64,6 +72,7 @@ export default function LoginPage() {
   const toggleMode = () => {
     setMode((m) => (m === "login" ? "register" : "login"));
     setError(null);
+    setSuccessMessage(null);
     setPassword("");
     setPasswordConfirm("");
   };
@@ -122,7 +131,7 @@ export default function LoginPage() {
 
               {/* Email field */}
               <div>
-                <label className="block text-[0.65rem] text-terminal-muted mb-1 tracking-widest">
+                <label className="block text-xs text-terminal-cyan mb-1.5 tracking-widest font-bold">
                   EMAIL
                 </label>
                 <div className="flex items-center border border-terminal-border px-3 py-2 focus-within:border-terminal-cyan transition-colors">
@@ -145,7 +154,7 @@ export default function LoginPage() {
 
               {/* Password field */}
               <div>
-                <label className="block text-[0.65rem] text-terminal-muted mb-1 tracking-widest">
+                <label className="block text-xs text-terminal-cyan mb-1.5 tracking-widest font-bold">
                   PASSWORD
                 </label>
                 <div className="flex items-center border border-terminal-border px-3 py-2 focus-within:border-terminal-cyan transition-colors">
@@ -171,7 +180,7 @@ export default function LoginPage() {
               {/* Confirm password (register only) */}
               {mode === "register" && (
                 <div>
-                  <label className="block text-[0.65rem] text-terminal-muted mb-1 tracking-widest">
+                  <label className="block text-xs text-terminal-cyan mb-1.5 tracking-widest font-bold">
                     CONFIRM PASSWORD
                   </label>
                   <div className="flex items-center border border-terminal-border px-3 py-2 focus-within:border-terminal-cyan transition-colors">
@@ -189,6 +198,18 @@ export default function LoginPage() {
                       required
                       minLength={8}
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* Success message */}
+              {successMessage && (
+                <div className="border border-terminal-cyan/40 bg-terminal-cyan/[0.03] px-3 py-2 text-xs space-y-0.5">
+                  <div className="text-terminal-cyan">
+                    {">"} REGISTRATION COMPLETE
+                  </div>
+                  <div className="text-terminal-cyan/70">
+                    {">"} {successMessage}
                   </div>
                 </div>
               )}

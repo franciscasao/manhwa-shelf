@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -13,6 +13,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace("/login");
     }
   }, [user, isLoading, router]);
+
+  useEffect(() => {
+    if (user && !user.verified) {
+      logout();
+      router.replace("/login");
+    }
+  }, [user, logout, router]);
 
   if (isLoading) {
     return (
@@ -25,7 +32,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (!user || !user.verified) {
     return null;
   }
 

@@ -30,6 +30,10 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 
 function getInitialAuthState(): AuthState {
   if (pb.authStore.isValid && pb.authStore.record) {
+    if (!pb.authStore.record.verified) {
+      pb.authStore.clear();
+      return { user: null, isLoading: false };
+    }
     return { user: pb.authStore.record, isLoading: false };
   }
   pb.authStore.clear();
@@ -42,6 +46,11 @@ export function useAuthProvider(): AuthContextValue {
   // Listen for auth changes (e.g. token expiry, other tabs)
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange((_token, record) => {
+      if (record && !record.verified) {
+        pb.authStore.clear();
+        setState({ user: null, isLoading: false });
+        return;
+      }
       setState({ user: record, isLoading: false });
     });
 
@@ -54,6 +63,10 @@ export function useAuthProvider(): AuthContextValue {
     const result = await pb
       .collection("users")
       .authWithPassword(email, password);
+    if (!result.record.verified) {
+      pb.authStore.clear();
+      throw new Error("Account not verified. Contact an administrator.");
+    }
     setState({ user: result.record, isLoading: false });
   }, []);
 
@@ -62,11 +75,6 @@ export function useAuthProvider(): AuthContextValue {
       await pb
         .collection("users")
         .create({ email, password, passwordConfirm });
-      // Auto-login after registration
-      const result = await pb
-        .collection("users")
-        .authWithPassword(email, password);
-      setState({ user: result.record, isLoading: false });
     },
     [],
   );

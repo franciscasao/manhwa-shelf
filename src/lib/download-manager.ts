@@ -114,7 +114,7 @@ class DownloadManager extends EventEmitter {
     const queue = this.queues.get(mangaId);
     if (!queue) return;
 
-    const pb = getServerPB();
+    const pb = await getServerPB();
     const signal = queue.abortController.signal;
 
     while (queue.jobs.length > 0) {
