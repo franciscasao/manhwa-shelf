@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { pb } from "@/lib/db";
-import { useTRPC, useTRPCClient } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { useTRPCClient } from "@/trpc/client";
 import type {
   ChapterProgress,
   DownloadQueueItem,
@@ -41,7 +40,6 @@ function snapshotToProgress(snapshot: MangaProgressSnapshot | null): {
 }
 
 export function useChapterDownload(mangaId: string, mangaTitle: string) {
-  const trpc = useTRPC();
   const trpcClient = useTRPCClient();
 
   const [serverState, setServerState] = useState<MangaProgressSnapshot | null>(null);
@@ -50,16 +48,11 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
   >(undefined);
 
   // Fetch initial server state
-  const statusQuery = useQuery(trpc.download.status.queryOptions({ mangaId }));
-
-  // Sync initial status query into local state
-  const initializedRef = useRef(false);
   useEffect(() => {
-    if (statusQuery.data !== undefined && !initializedRef.current) {
-      initializedRef.current = true;
-      setServerState(statusQuery.data);
-    }
-  }, [statusQuery.data]);
+    trpcClient.download.status
+      .query({ mangaId })
+      .then(setServerState);
+  }, [trpcClient, mangaId]);
 
   // Subscribe to live progress updates
   useEffect(() => {

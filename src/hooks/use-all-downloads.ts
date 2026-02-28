@@ -1,26 +1,18 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useTRPC, useTRPCClient } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useTRPCClient } from "@/trpc/client";
 import type { MangaProgressSnapshot } from "@/lib/types";
 
 export function useAllDownloads() {
-  const trpc = useTRPC();
   const trpcClient = useTRPCClient();
 
   const [snapshots, setSnapshots] = useState<MangaProgressSnapshot[]>([]);
 
   // Fetch initial state
-  const statusQuery = useQuery(trpc.download.allStatus.queryOptions());
-
-  const initializedRef = useRef(false);
   useEffect(() => {
-    if (statusQuery.data !== undefined && !initializedRef.current) {
-      initializedRef.current = true;
-      setSnapshots(statusQuery.data);
-    }
-  }, [statusQuery.data]);
+    trpcClient.download.allStatus.query().then(setSnapshots);
+  }, [trpcClient]);
 
   // Subscribe to live updates
   useEffect(() => {

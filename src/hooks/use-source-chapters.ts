@@ -1,45 +1,73 @@
 "use client";
 
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc/client";
+import { useState, useEffect, useCallback } from "react";
+import { useTRPCClient } from "@/trpc/client";
 import type { SourceIdentifier } from "@/extensions";
+import type { SourceChapter } from "@/extensions/types";
 
 export function useSourceChapters(source: SourceIdentifier | null) {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
+  const trpcClient = useTRPCClient();
 
-  const queryOptions = trpc.source.fetchChapters.queryOptions({
-    sourceId: source?.sourceId ?? "",
-    seriesId: source?.seriesId ?? "",
-  });
+  const [chapters, setChapters] = useState<SourceChapter[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const result = useQuery({
-    ...queryOptions,
-    enabled: source !== null,
-    staleTime: Infinity,
-  });
-
-  const refreshMutation = useMutation({
-    ...trpc.source.refreshChapters.mutationOptions(),
-    onSuccess: (data) => {
-      // Inject fresh data into the fetchChapters query cache
-      queryClient.setQueryData(queryOptions.queryKey, data);
-    },
-  });
-
-  const refresh = () => {
+  // Initial fetch
+  useEffect(() => {
     if (!source) return;
-    refreshMutation.mutate({
-      sourceId: source.sourceId,
-      seriesId: source.seriesId,
-    });
-  };
+
+    let cancelled = false;
+
+    setIsLoading(true);
+    setError(null);
+
+    trpcClient.source.fetchChapters
+      .query({ sourceId: source.sourceId, seriesId: source.seriesId })
+      .then((data) => {
+        if (!cancelled) {
+          setChapters(data);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setError(err.message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trpcClient, source?.sourceId, source?.seriesId]);
+
+  const refresh = useCallback(() => {
+    if (!source) return;
+
+    setIsRefreshing(true);
+
+    trpcClient.source.refreshChapters
+      .mutate({ sourceId: source.sourceId, seriesId: source.seriesId })
+      .then((data) => {
+        setChapters(data);
+      })
+      .catch((err: Error) => {
+        setError(err.message);
+      })
+      .finally(() => {
+        setIsRefreshing(false);
+      });
+  }, [trpcClient, source]);
 
   return {
-    chapters: result.data ?? null,
-    isLoading: result.isLoading && result.fetchStatus !== "idle",
-    error: result.error?.message ?? null,
+    chapters,
+    isLoading,
+    error,
     refresh,
-    isRefreshing: refreshMutation.isPending,
+    isRefreshing,
   };
 }

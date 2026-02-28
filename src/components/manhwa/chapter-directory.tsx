@@ -245,13 +245,11 @@ function ChapterRow({
       <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
       <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
       {isChapterDownloaded && readHref ? (
-        <Link
-          href={readHref}
+        <span
           className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
-          onClick={(e) => e.stopPropagation()}
         >
           [ READ ]
-        </Link>
+        </span>
       ) : onDownload ? (
         <button onClick={onDownload} className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">
           [ DL ]
