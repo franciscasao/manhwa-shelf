@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useShelf } from "@/hooks/use-shelf";
 import { FilterValue, SortValue, ViewMode } from "@/lib/types";
 import { getDownloadStatus, parseSizeGB, sortManga } from "@/lib/manga-utils";
@@ -21,31 +22,48 @@ import {
 
 const PAGE_SIZE = 20;
 
-export default function LibraryPage() {
+function LibraryPageInner() {
+  const searchParams = useSearchParams();
   const { shelf, isHydrated, removeFromShelf } = useShelf();
-  const [activeFilter, setActiveFilter] = useState<FilterValue>("all");
-  const [sortBy, setSortBy] = useState<SortValue>("title");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+
+  const [activeFilter, setActiveFilter] = useState<FilterValue>(() => {
+    const p = searchParams.get("filter");
+    const valid: string[] = ["complete", "partial", "not-downloaded"];
+    return valid.includes(p ?? "") ? (p as FilterValue) : "all";
+  });
+  const [sortBy, setSortBy] = useState<SortValue>(() => {
+    const p = searchParams.get("sort");
+    const valid: string[] = ["rating", "chapters", "size", "updated"];
+    return valid.includes(p ?? "") ? (p as SortValue) : "title";
+  });
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (searchParams.get("view") === "list" ? "list" : "grid"));
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") ?? "");
+  const [currentPage, setCurrentPage] = useState(() => {
+    const n = parseInt(searchParams.get("page") ?? "1", 10);
+    return n >= 1 ? n : 1;
+  });
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+
+  // Sync state → URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("q", searchQuery);
+    if (activeFilter !== "all") params.set("filter", activeFilter);
+    if (sortBy !== "title") params.set("sort", sortBy);
+    if (viewMode !== "grid") params.set("view", viewMode);
+    if (currentPage > 1) params.set("page", String(currentPage));
+    const qs = params.toString();
+    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [searchQuery, activeFilter, sortBy, viewMode, currentPage]);
 
   // Compute stats
   const stats = useMemo(() => {
-    const completeCount = shelf.filter(
-      (m) => getDownloadStatus(m) === "complete",
-    ).length;
-    const partialCount = shelf.filter(
-      (m) => getDownloadStatus(m) === "partial",
-    ).length;
-    const noneCount = shelf.filter(
-      (m) => getDownloadStatus(m) === "not-downloaded",
-    ).length;
+    const completeCount = shelf.filter((m) => getDownloadStatus(m) === "complete").length;
+    const partialCount = shelf.filter((m) => getDownloadStatus(m) === "partial").length;
+    const noneCount = shelf.filter((m) => getDownloadStatus(m) === "not-downloaded").length;
     const totalChapters = shelf.reduce((s, m) => s + m.chapters.downloaded, 0);
-    const totalSizeGB = shelf.reduce(
-      (s, m) => s + parseSizeGB(m.sizeOnDisk),
-      0,
-    );
+    const totalSizeGB = shelf.reduce((s, m) => s + parseSizeGB(m.sizeOnDisk), 0);
     return {
       completeCount,
       partialCount,
@@ -67,26 +85,28 @@ export default function LibraryPage() {
     // Filter by search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.author.toLowerCase().includes(q),
-      );
+      result = result.filter((m) => m.title.toLowerCase().includes(q) || m.author.toLowerCase().includes(q));
     }
 
     // Sort
     return sortManga(result, sortBy);
   }, [shelf, activeFilter, searchQuery, sortBy]);
 
-  useEffect(() => {
+  const handleFilterChange = (f: FilterValue) => {
+    setActiveFilter(f);
     setCurrentPage(1);
-  }, [activeFilter, searchQuery, sortBy]);
+  };
+  const handleSortChange = (s: SortValue) => {
+    setSortBy(s);
+    setCurrentPage(1);
+  };
+  const handleSearchChange = (q: string) => {
+    setSearchQuery(q);
+    setCurrentPage(1);
+  };
 
   const totalPages = Math.ceil(filteredManga.length / PAGE_SIZE);
-  const paginatedManga = filteredManga.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  const paginatedManga = filteredManga.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const counts = {
     all: shelf.length,
@@ -153,11 +173,11 @@ export default function LibraryPage() {
         {/* Toolbar */}
         <LibraryToolbar
           activeFilter={activeFilter}
-          onFilterChange={setActiveFilter}
+          onFilterChange={handleFilterChange}
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={handleSearchChange}
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={handleSortChange}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           counts={counts}
@@ -194,54 +214,32 @@ export default function LibraryPage() {
               >
                 <div className="h-[38px] w-[28px] shrink-0 bg-terminal-border/30 animate-pulse" />
                 <div className="flex-1 space-y-1.5">
-                  <div
-                    className="h-2 bg-terminal-border/40 animate-pulse"
-                    style={{ width: `${60 + (i % 3) * 15}%` }}
-                  />
+                  <div className="h-2 bg-terminal-border/40 animate-pulse" style={{ width: `${60 + (i % 3) * 15}%` }} />
                   <div
                     className="h-1.5 bg-terminal-border/20 animate-pulse"
                     style={{ width: `${30 + (i % 4) * 10}%` }}
                   />
                 </div>
-                <div className="text-[0.6rem] text-terminal-muted shrink-0">
-                  loading...
-                </div>
+                <div className="text-[0.6rem] text-terminal-muted shrink-0">loading...</div>
               </div>
             ))}
           </div>
         ) : shelf.length === 0 ? (
           <LibraryEmptyState mode="empty" />
         ) : filteredManga.length === 0 ? (
-          <LibraryEmptyState
-            mode="no-matches"
-            searchQuery={searchQuery}
-            activeFilter={filterFlag}
-          />
+          <LibraryEmptyState mode="no-matches" searchQuery={searchQuery} activeFilter={filterFlag} />
         ) : (
-          <div
-            key={`${viewMode}-${activeFilter}-${searchQuery}-${sortBy}`}
-            className="view-fade"
-          >
+          <div key={`${viewMode}-${activeFilter}-${searchQuery}-${sortBy}`} className="view-fade">
             {viewMode === "grid" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {paginatedManga.map((manga, index) => (
-                  <LibraryTerminalCard
-                    key={manga.id}
-                    manga={manga}
-                    index={index}
-                    onRemove={handleRemove}
-                  />
+                  <LibraryTerminalCard key={manga.id} manga={manga} index={index} onRemove={handleRemove} />
                 ))}
               </div>
             ) : (
               <div className="space-y-1">
                 {paginatedManga.map((manga, index) => (
-                  <LibraryListRow
-                    key={manga.id}
-                    manga={manga}
-                    index={index}
-                    onRemove={handleRemove}
-                  />
+                  <LibraryListRow key={manga.id} manga={manga} index={index} onRemove={handleRemove} />
                 ))}
               </div>
             )}
@@ -255,21 +253,13 @@ export default function LibraryPage() {
         />
 
         {/* Remove confirmation dialog */}
-        <Dialog
-          open={confirmRemoveId !== null}
-          onOpenChange={(open) => !open && setConfirmRemoveId(null)}
-        >
+        <Dialog open={confirmRemoveId !== null} onOpenChange={(open) => !open && setConfirmRemoveId(null)}>
           <DialogContent className="border-terminal-border bg-terminal-bg font-mono sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-terminal-orange text-sm">
-                {">"} CONFIRM REMOVAL
-              </DialogTitle>
+              <DialogTitle className="text-terminal-orange text-sm">{">"} CONFIRM REMOVAL</DialogTitle>
               <DialogDescription className="text-terminal-dim text-xs">
-                Remove{" "}
-                <span className="text-terminal-cyan">
-                  {confirmTarget?.title}
-                </span>{" "}
-                from your local shelf archive? This action cannot be undone.
+                Remove <span className="text-terminal-cyan">{confirmTarget?.title}</span> from your local shelf archive?
+                This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-2">
@@ -310,5 +300,13 @@ export default function LibraryPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense>
+      <LibraryPageInner />
+    </Suspense>
   );
 }

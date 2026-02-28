@@ -184,11 +184,7 @@ function DownloadControls({
       ) : (
         <>
           {BATCH_SIZES.filter((n) => n < remainingCount).map((n) => (
-            <button
-              key={n}
-              onClick={() => onDownloadBatch(n)}
-              className="text-terminal-cyan hover:text-terminal-green"
-            >
+            <button key={n} onClick={() => onDownloadBatch(n)} className="text-terminal-cyan hover:text-terminal-green">
               [ DL {n} ]
             </button>
           ))}
@@ -245,11 +241,7 @@ function ChapterRow({
       <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
       <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
       {isChapterDownloaded && readHref ? (
-        <span
-          className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]"
-        >
-          [ READ ]
-        </span>
+        <span className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">[ READ ]</span>
       ) : onDownload ? (
         <button onClick={onDownload} className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">
           [ DL ]
