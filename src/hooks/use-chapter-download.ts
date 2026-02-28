@@ -162,7 +162,7 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
     setServerState(null);
   }, [trpcClient, mangaId]);
 
-  const { queue, currentProgress, isProcessing } = snapshotToProgress(serverState);
+  const { queue, currentProgress, isProcessing } = useMemo(() => snapshotToProgress(serverState), [serverState]);
 
   return {
     queue,

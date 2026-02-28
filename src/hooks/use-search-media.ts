@@ -14,7 +14,6 @@ export function useSearchMedia(query: string, origin: SearchOrigin, page: number
   const [results, setResults] = useState<AniListMedia[]>([]);
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -33,7 +32,6 @@ export function useSearchMedia(query: string, origin: SearchOrigin, page: number
     let cancelled = false;
 
     setIsLoading(true);
-    setIsFetching(true);
     setError(null);
     setQueryMs(null);
     loadStartRef.current = Date.now();
@@ -57,7 +55,6 @@ export function useSearchMedia(query: string, origin: SearchOrigin, page: number
       .finally(() => {
         if (!cancelled) {
           setIsLoading(false);
-          setIsFetching(false);
         }
       });
 
@@ -70,7 +67,6 @@ export function useSearchMedia(query: string, origin: SearchOrigin, page: number
     results,
     pageInfo,
     isLoading,
-    isFetching,
     error,
     hasSearched,
     queryMs,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, baseProcedure } from "@/trpc/init";
 import { downloadManager } from "@/lib/download-manager";
+import { eventChannel } from "@/lib/event-channel";
 import type { MangaProgressSnapshot } from "@/lib/types";
 
 const downloadItemSchema = z.object({
@@ -42,46 +43,12 @@ export const downloadRouter = createTRPCRouter({
 
   allProgress: baseProcedure
     .subscription(async function* ({ signal }) {
-      // Yield current state immediately
       yield downloadManager.getAllActive();
-
-      const queue: MangaProgressSnapshot[][] = [];
-      let resolve: (() => void) | null = null;
-      let done = false;
-
-      const onProgress = (snapshots: MangaProgressSnapshot[]) => {
-        queue.push(snapshots);
-        resolve?.();
-      };
-
-      downloadManager.on("progress:*", onProgress);
-
-      const cleanup = () => {
-        downloadManager.off("progress:*", onProgress);
-      };
-
-      signal?.addEventListener("abort", () => {
-        done = true;
-        resolve?.();
-      }, { once: true });
-
-      try {
-        while (!done && !signal?.aborted) {
-          if (queue.length > 0) {
-            yield queue.shift()!;
-          } else {
-            await new Promise<void>((r) => {
-              resolve = r;
-            });
-            resolve = null;
-          }
-        }
-        while (queue.length > 0) {
-          yield queue.shift()!;
-        }
-      } finally {
-        cleanup();
-      }
+      yield* eventChannel<MangaProgressSnapshot[]>({
+        emitter: downloadManager,
+        events: ["progress:*"],
+        signal,
+      });
     }),
 
   progress: baseProcedure
@@ -89,57 +56,16 @@ export const downloadRouter = createTRPCRouter({
     .subscription(async function* ({ input, signal }) {
       const { mangaId } = input;
 
-      // Yield current state immediately on connect
       const current = downloadManager.getStatus(mangaId);
       if (current) {
         yield current;
       }
 
-      // Bridge EventEmitter → async generator using a push-queue
-      const queue: MangaProgressSnapshot[] = [];
-      let resolve: (() => void) | null = null;
-      let done = false;
-
-      const onProgress = (snapshot: MangaProgressSnapshot) => {
-        queue.push(snapshot);
-        resolve?.();
-      };
-
-      const onDone = () => {
-        done = true;
-        resolve?.();
-      };
-
-      downloadManager.on(`progress:${mangaId}`, onProgress);
-      downloadManager.on(`done:${mangaId}`, onDone);
-
-      const cleanup = () => {
-        downloadManager.off(`progress:${mangaId}`, onProgress);
-        downloadManager.off(`done:${mangaId}`, onDone);
-      };
-
-      signal?.addEventListener("abort", () => {
-        done = true;
-        resolve?.();
-      }, { once: true });
-
-      try {
-        while (!done && !signal?.aborted) {
-          if (queue.length > 0) {
-            yield queue.shift()!;
-          } else {
-            await new Promise<void>((r) => {
-              resolve = r;
-            });
-            resolve = null;
-          }
-        }
-        // Drain remaining items
-        while (queue.length > 0) {
-          yield queue.shift()!;
-        }
-      } finally {
-        cleanup();
-      }
+      yield* eventChannel<MangaProgressSnapshot>({
+        emitter: downloadManager,
+        events: [`progress:${mangaId}`],
+        doneEvents: [`done:${mangaId}`],
+        signal,
+      });
     }),
 });

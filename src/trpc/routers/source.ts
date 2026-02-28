@@ -46,6 +46,18 @@ async function fetchAndCacheChapters(
   return chapters;
 }
 
+async function wrapSourceError<T>(promise: Promise<T>, action: string): Promise<T> {
+  try {
+    return await promise;
+  } catch (err) {
+    if (err instanceof TRPCError) throw err;
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: err instanceof Error ? err.message : `Failed to ${action}`,
+    });
+  }
+}
+
 const chapterInput = z.object({
   sourceId: z.string().min(1),
   seriesId: z.string().min(1),
@@ -68,31 +80,19 @@ export const sourceRouter = createTRPCRouter({
         // Cache miss — fetch from source
       }
 
-      try {
-        return await fetchAndCacheChapters(ctx.pb, sourceId, seriesId);
-      } catch (err) {
-        if (err instanceof TRPCError) throw err;
-        throw new TRPCError({
-          code: "BAD_GATEWAY",
-          message:
-            err instanceof Error ? err.message : "Failed to fetch chapters",
-        });
-      }
+      return wrapSourceError(
+        fetchAndCacheChapters(ctx.pb, sourceId, seriesId),
+        "fetch chapters",
+      );
     }),
 
   refreshChapters: baseProcedure
     .input(chapterInput)
     .mutation(async ({ input, ctx }): Promise<SourceChapter[]> => {
       const { sourceId, seriesId } = input;
-      try {
-        return await fetchAndCacheChapters(ctx.pb, sourceId, seriesId);
-      } catch (err) {
-        if (err instanceof TRPCError) throw err;
-        throw new TRPCError({
-          code: "BAD_GATEWAY",
-          message:
-            err instanceof Error ? err.message : "Failed to refresh chapters",
-        });
-      }
+      return wrapSourceError(
+        fetchAndCacheChapters(ctx.pb, sourceId, seriesId),
+        "refresh chapters",
+      );
     }),
 });
