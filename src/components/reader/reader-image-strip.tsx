@@ -183,6 +183,7 @@ export function ReaderImageStrip({
                       : url
                   }
                   alt={`Page ${i + 1}`}
+                  loading={i <= PRELOAD_AHEAD ? "eager" : "lazy"}
                   className={`w-full block reader-image ${isLoaded ? "" : "h-0 overflow-hidden"}`}
                   onLoad={(e) =>
                     handleImageLoad(i, e.target as HTMLImageElement)
