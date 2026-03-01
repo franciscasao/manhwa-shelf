@@ -33,7 +33,13 @@ export default function ManhwaDetailPage() {
   const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
 
   const activeSource = media ? findActiveSource(media.externalLinks) : null;
-  const { chapters, refresh, isRefreshing, isLoading: isLoadingChapters } = useSourceChapters(activeSource);
+  const {
+    chapters,
+    refresh,
+    isRefreshing,
+    isLoading: isLoadingChapters,
+    error: sourceError,
+  } = useSourceChapters(activeSource);
 
   const mangaTitle = media?.title?.english || media?.title?.romaji || "Unknown";
 
@@ -151,6 +157,7 @@ export default function ManhwaDetailPage() {
                 onRefresh={activeSource ? refresh : undefined}
                 isRefreshing={isRefreshing}
                 isLoadingChapters={isLoadingChapters}
+                sourceError={sourceError}
               />
             </div>
 

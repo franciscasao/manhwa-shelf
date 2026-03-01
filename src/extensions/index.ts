@@ -44,3 +44,4 @@ export {
 // Import extensions to trigger auto-registration
 import "./webtoons";
 import "./tapas";
+import "./qtoon";

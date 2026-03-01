@@ -7,18 +7,11 @@ import type PocketBase from "pocketbase";
 
 /** Deterministic 15-char PocketBase ID from sourceId + seriesId. */
 function toChapterCacheId(sourceId: string, seriesId: string): string {
-  return createHash("md5")
-    .update(`${sourceId}:${seriesId}`)
-    .digest("hex")
-    .slice(0, 15);
+  return createHash("md5").update(`${sourceId}:${seriesId}`).digest("hex").slice(0, 15);
 }
 
 /** Fetch chapters from the source extension and upsert into the cache. */
-async function fetchAndCacheChapters(
-  pb: PocketBase,
-  sourceId: string,
-  seriesId: string,
-): Promise<SourceChapter[]> {
+async function fetchAndCacheChapters(pb: PocketBase, sourceId: string, seriesId: string): Promise<SourceChapter[]> {
   const source = getSource(sourceId);
   if (!source) {
     throw new TRPCError({
@@ -64,35 +57,23 @@ const chapterInput = z.object({
 });
 
 export const sourceRouter = createTRPCRouter({
-  fetchChapters: baseProcedure
-    .input(chapterInput)
-    .query(async ({ input, ctx }): Promise<SourceChapter[]> => {
-      const { sourceId, seriesId } = input;
-      const cacheId = toChapterCacheId(sourceId, seriesId);
+  fetchChapters: baseProcedure.input(chapterInput).query(async ({ input, ctx }): Promise<SourceChapter[]> => {
+    const { sourceId, seriesId } = input;
+    const cacheId = toChapterCacheId(sourceId, seriesId);
 
-      // Try cache first
-      try {
-        const cached = await ctx.pb
-          .collection("chapterCache")
-          .getOne(cacheId);
-        return cached.chapters as SourceChapter[];
-      } catch {
-        // Cache miss — fetch from source
-      }
+    // Try cache first
+    try {
+      const cached = await ctx.pb.collection("chapterCache").getOne(cacheId);
+      return cached.chapters as SourceChapter[];
+    } catch {
+      // Cache miss — fetch from source
+    }
 
-      return wrapSourceError(
-        fetchAndCacheChapters(ctx.pb, sourceId, seriesId),
-        "fetch chapters",
-      );
-    }),
+    return wrapSourceError(fetchAndCacheChapters(ctx.pb, sourceId, seriesId), "fetch chapters");
+  }),
 
-  refreshChapters: baseProcedure
-    .input(chapterInput)
-    .mutation(async ({ input, ctx }): Promise<SourceChapter[]> => {
-      const { sourceId, seriesId } = input;
-      return wrapSourceError(
-        fetchAndCacheChapters(ctx.pb, sourceId, seriesId),
-        "refresh chapters",
-      );
-    }),
+  refreshChapters: baseProcedure.input(chapterInput).mutation(async ({ input, ctx }): Promise<SourceChapter[]> => {
+    const { sourceId, seriesId } = input;
+    return wrapSourceError(fetchAndCacheChapters(ctx.pb, sourceId, seriesId), "refresh chapters");
+  }),
 });

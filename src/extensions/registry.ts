@@ -39,15 +39,11 @@ export function identifySource(url: string): SourceIdentifier | null {
  * Check if an image URL belongs to any registered source's allowed domains.
  * Returns the matching source for header lookup, or undefined if no match.
  */
-export function validateImageDomain(
-  imageUrl: string,
-): { valid: boolean; source?: Source } {
+export function validateImageDomain(imageUrl: string): { valid: boolean; source?: Source } {
   try {
     const parsed = new URL(imageUrl);
     for (const source of sources.values()) {
-      const isAllowed = source.imageDomains.some(
-        (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`),
-      );
+      const isAllowed = source.imageDomains.some((d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`));
       if (isAllowed) return { valid: true, source };
     }
   } catch {
@@ -60,9 +56,7 @@ export function validateImageDomain(
  * Find the first source that recognizes any URL in a list of external links.
  * Designed to work with AniList's `externalLinks` array.
  */
-export function findSourceLink(
-  externalLinks: { url: string }[] | null | undefined,
-): SourceIdentifier | null {
+export function findSourceLink(externalLinks: { url: string }[] | null | undefined): SourceIdentifier | null {
   if (!externalLinks) return null;
   for (const link of externalLinks) {
     const id = identifySource(link.url);

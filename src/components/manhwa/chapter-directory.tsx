@@ -18,6 +18,7 @@ interface ChapterDirectoryProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   isLoadingChapters?: boolean;
+  sourceError?: string | null;
 }
 
 const PER_PAGE = 50;
@@ -311,6 +312,7 @@ export function ChapterDirectory({
   onRefresh,
   isRefreshing,
   isLoadingChapters,
+  sourceError,
 }: ChapterDirectoryProps) {
   const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
     useChapterDownload(mangaId, mangaTitle);
@@ -417,6 +419,18 @@ export function ChapterDirectory({
         </div>
 
         <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+      </DirectoryShell>
+    );
+  }
+
+  // Source found but fetch failed — show error with retry
+  if (onRefresh && sourceError) {
+    return (
+      <DirectoryShell onRefresh={onRefresh} isRefreshing={isRefreshing}>
+        <div className="text-xs space-y-1">
+          <div className="text-terminal-orange">{">"} source fetch failed</div>
+          <div className="text-terminal-dim">{">"} {sourceError}</div>
+        </div>
       </DirectoryShell>
     );
   }
