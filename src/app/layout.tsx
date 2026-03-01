@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/navbar";
 import { Providers } from "@/components/providers";
+import { AppShell } from "@/components/app-shell";
+import { DownloadManagerPopup } from "@/components/download-manager-popup";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,8 +44,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <Providers>
-          <Navbar />
-          {children}
+          <AppShell>{children}</AppShell>
+          <DownloadManagerPopup />
         </Providers>
       </body>
     </html>

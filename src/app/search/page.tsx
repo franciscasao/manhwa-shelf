@@ -3,21 +3,34 @@
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { mapAniListToManga } from "@/lib/anilist";
-import { SearchOrigin } from "@/lib/types";
 import { useShelf } from "@/hooks/use-shelf";
 import { useSearchMedia } from "@/hooks/use-search-media";
 import { Plus, Check } from "lucide-react";
 import { MangaTerminalCard } from "@/components/manga-terminal-card";
 import { TerminalPagination } from "@/components/terminal-pagination";
+import { SearchOrigin } from "@/lib/types";
 
-const VALID_ORIGINS: SearchOrigin[] = ["KR", "JP", "ALL"];
+const ORIGIN_OPTIONS: Array<{
+  value: SearchOrigin;
+  flag: string;
+  label: string;
+}> = [
+  { value: "ALL", flag: "--all", label: "MANGA/MANHWA/MANHUA" },
+  { value: "KR", flag: "--manhwa (KR)", label: "MANHWA" },
+  { value: "JP", flag: "--manga (JP)", label: "MANGA" },
+  { value: "CN", flag: "--manhua (CN)", label: "MANHUA" },
+  { value: "TW", flag: "--manhua (TW)", label: "MANHUA" },
+];
+
+const VALID_ORIGINS: SearchOrigin[] = ORIGIN_OPTIONS.map((o) => o.value);
 
 export default function SearchPage() {
   return (
     <Suspense
       fallback={
         <div className="font-mono min-h-screen bg-terminal-bg text-terminal-green px-3 py-10 text-xs">
-          {">"} initializing search interface<span className="blink-cursor">_</span>
+          {">"} initializing search interface
+          <span className="blink-cursor">_</span>
         </div>
       }
     >
@@ -29,9 +42,7 @@ export default function SearchPage() {
 function SearchPageInner() {
   const searchParams = useSearchParams();
 
-  const [query, setQuery] = useState(
-    () => searchParams.get("q") ?? "",
-  );
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [origin, setOrigin] = useState<SearchOrigin>(() => {
     const param = searchParams.get("origin");
     return param && VALID_ORIGINS.includes(param as SearchOrigin)
@@ -57,7 +68,7 @@ function SearchPageInner() {
     useSearchMedia(query, origin, currentPage, showAdult);
 
   const originLabel =
-    origin === "KR" ? "MANHWA" : origin === "JP" ? "MANGA" : "MANGA/MANHWA";
+    ORIGIN_OPTIONS.find((o) => o.value === origin)?.label ?? origin;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -71,7 +82,9 @@ function SearchPageInner() {
     if (currentPage > 1) params.set("page", String(currentPage));
     if (showAdult) params.set("nsfw", "1");
     const qs = params.toString();
-    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    const url = qs
+      ? `${window.location.pathname}?${qs}`
+      : window.location.pathname;
     window.history.replaceState(null, "", url);
   }, [query, origin, currentPage, showAdult]);
 
@@ -124,8 +137,7 @@ function SearchPageInner() {
             <span className="text-terminal-dim">]</span> {originLabel}-SHELF
             ARCHIVE
             <span className="text-terminal-muted"> | </span>SOURCE: ANILIST
-            <span className="text-terminal-muted"> | </span>COUNTRY:{" "}
-            {origin === "ALL" ? "JP+KR" : origin}
+            <span className="text-terminal-muted"> | </span>COUNTRY: {origin}
             <span className="text-terminal-muted"> | </span>FORMAT: MANGA
             <span className="blink-cursor text-terminal-green">_</span>
           </div>
@@ -136,36 +148,19 @@ function SearchPageInner() {
           <span className="text-[0.65rem] text-terminal-muted tracking-widest mr-1">
             MODE:
           </span>
-          <button
-            onClick={() => handleOriginChange("ALL")}
-            className={`border px-3 py-1 text-xs font-mono transition-colors ${
-              origin === "ALL"
-                ? "border-terminal-cyan bg-terminal-cyan/10 text-terminal-cyan"
-                : "border-terminal-border text-terminal-dim hover:text-terminal-muted"
-            }`}
-          >
-            --all
-          </button>
-          <button
-            onClick={() => handleOriginChange("KR")}
-            className={`border px-3 py-1 text-xs font-mono transition-colors ${
-              origin === "KR"
-                ? "border-terminal-cyan bg-terminal-cyan/10 text-terminal-cyan"
-                : "border-terminal-border text-terminal-dim hover:text-terminal-muted"
-            }`}
-          >
-            --manhwa (KR)
-          </button>
-          <button
-            onClick={() => handleOriginChange("JP")}
-            className={`border px-3 py-1 text-xs font-mono transition-colors ${
-              origin === "JP"
-                ? "border-terminal-cyan bg-terminal-cyan/10 text-terminal-cyan"
-                : "border-terminal-border text-terminal-dim hover:text-terminal-muted"
-            }`}
-          >
-            --manga (JP)
-          </button>
+          {ORIGIN_OPTIONS.map(({ value, flag }) => (
+            <button
+              key={value}
+              onClick={() => handleOriginChange(value)}
+              className={`border px-3 py-1 text-xs font-mono transition-colors ${
+                origin === value
+                  ? "border-terminal-cyan bg-terminal-cyan/10 text-terminal-cyan"
+                  : "border-terminal-border text-terminal-dim hover:text-terminal-muted"
+              }`}
+            >
+              {flag}
+            </button>
+          ))}
           <span className="mx-1 text-terminal-border">|</span>
           <button
             onClick={handleToggleAdult}

@@ -1,23 +1,76 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { pb } from "@/lib/db";
-import { downloadChapterToServer } from "@/lib/chapter-download";
+import { useTRPCClient } from "@/trpc/client";
 import type {
-  ChapterDownloadState,
   ChapterProgress,
   DownloadQueueItem,
+  MangaProgressSnapshot,
 } from "@/lib/types";
 
+function snapshotToProgress(snapshot: MangaProgressSnapshot | null): {
+  queue: DownloadQueueItem[];
+  currentProgress: ChapterProgress | null;
+  isProcessing: boolean;
+} {
+  if (!snapshot || !snapshot.isProcessing) {
+    return { queue: [], currentProgress: null, isProcessing: false };
+  }
+
+  const queue: DownloadQueueItem[] = snapshot.queuedChapters.map((num) => ({
+    mangaId: snapshot.mangaId,
+    chapterNum: num,
+    episodeTitle: "",
+    chapterUrl: "",
+    sourceId: "",
+  }));
+
+  const currentProgress: ChapterProgress | null = snapshot.currentChapter
+    ? {
+        chapterNum: snapshot.currentChapter.chapterNum,
+        state: snapshot.currentChapter.state === "queued" ? "idle" : snapshot.currentChapter.state,
+        imagesDownloaded: snapshot.currentChapter.imagesDownloaded,
+        imagesTotal: snapshot.currentChapter.imagesTotal,
+        error: snapshot.currentChapter.error,
+      }
+    : null;
+
+  return { queue, currentProgress, isProcessing: snapshot.isProcessing };
+}
+
 export function useChapterDownload(mangaId: string, mangaTitle: string) {
-  const [queue, setQueue] = useState<DownloadQueueItem[]>([]);
-  const [currentProgress, setCurrentProgress] = useState<ChapterProgress | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const processingRef = useRef(false);
+  const trpcClient = useTRPCClient();
+
+  const [serverState, setServerState] = useState<MangaProgressSnapshot | null>(null);
   const [downloadRecords, setDownloadRecords] = useState<
     { chapterNum: number }[] | undefined
   >(undefined);
 
+  // Fetch initial server state
+  useEffect(() => {
+    trpcClient.download.status
+      .query({ mangaId })
+      .then(setServerState);
+  }, [trpcClient, mangaId]);
+
+  // Subscribe to live progress updates
+  useEffect(() => {
+    const sub = trpcClient.download.progress.subscribe(
+      { mangaId },
+      {
+        onData(snapshot: MangaProgressSnapshot) {
+          setServerState(snapshot);
+        },
+      },
+    );
+
+    return () => {
+      sub.unsubscribe();
+    };
+  }, [trpcClient, mangaId]);
+
+  // PocketBase subscription for tracking downloadedChapters set
   useEffect(() => {
     let cancelled = false;
 
@@ -35,10 +88,7 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
       });
 
     pb.collection("chapterDownloads").subscribe("*", (e) => {
-      if (
-        (e.record["mangaId"] as string) !== mangaId
-      )
-        return;
+      if ((e.record["mangaId"] as string) !== mangaId) return;
 
       setDownloadRecords((prev) => {
         const current = prev ?? [];
@@ -70,117 +120,49 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
     return set;
   }, [downloadRecords]);
 
-  const processQueue = useCallback(
-    async (items: DownloadQueueItem[]) => {
-      if (processingRef.current) return;
-      processingRef.current = true;
-
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      for (let i = 0; i < items.length; i++) {
-        if (controller.signal.aborted) break;
-
-        const item = items[i];
-        const progress: ChapterProgress = {
-          chapterNum: item.chapterNum,
-          state: "fetching-pages" as ChapterDownloadState,
-          imagesDownloaded: 0,
-          imagesTotal: 0,
-        };
-
-        setCurrentProgress({ ...progress });
-
-        try {
-          await downloadChapterToServer(
-            mangaId,
-            mangaTitle,
-            item.chapterNum,
-            item.viewerLink,
-            item.episodeTitle,
-            (downloaded, total) => {
-              if (controller.signal.aborted) return;
-              setCurrentProgress({
-                chapterNum: item.chapterNum,
-                state: "downloading",
-                imagesDownloaded: downloaded,
-                imagesTotal: total,
-              });
-            },
-            () => {
-              if (controller.signal.aborted) return;
-              setCurrentProgress({
-                chapterNum: item.chapterNum,
-                state: "uploading",
-                imagesDownloaded: 0,
-                imagesTotal: 0,
-              });
-            },
-            controller.signal,
-          );
-
-          if (!controller.signal.aborted) {
-            setCurrentProgress({
-              chapterNum: item.chapterNum,
-              state: "complete",
-              imagesDownloaded: 0,
-              imagesTotal: 0,
-            });
-
-            setQueue((prev) => prev.slice(1));
-          }
-        } catch (err) {
-          if (!controller.signal.aborted) {
-            setCurrentProgress({
-              chapterNum: item.chapterNum,
-              state: "error",
-              imagesDownloaded: 0,
-              imagesTotal: 0,
-              error: err instanceof Error ? err.message : "Download failed",
-            });
-            setQueue((prev) => prev.slice(1));
-          }
-        }
-      }
-
-      processingRef.current = false;
-      abortControllerRef.current = null;
-      if (!controller.signal.aborted) {
-        setCurrentProgress(null);
-      }
-    },
-    [mangaId, mangaTitle],
-  );
-
   const enqueueChapter = useCallback(
     (item: DownloadQueueItem) => {
-      const newQueue = [item];
-      setQueue(newQueue);
-      processQueue(newQueue);
+      trpcClient.download.enqueue.mutate({
+        mangaId,
+        mangaTitle,
+        items: [
+          {
+            chapterNum: item.chapterNum,
+            chapterUrl: item.chapterUrl,
+            episodeTitle: item.episodeTitle,
+            sourceId: item.sourceId,
+          },
+        ],
+      });
     },
-    [processQueue],
+    [trpcClient, mangaId, mangaTitle],
   );
 
   const enqueueMany = useCallback(
     (items: DownloadQueueItem[]) => {
-      // Filter out already-downloaded chapters
       const filtered = items.filter((item) => !downloadedChapters.has(item.chapterNum));
       if (filtered.length === 0) return;
-      setQueue(filtered);
-      processQueue(filtered);
+
+      trpcClient.download.enqueue.mutate({
+        mangaId,
+        mangaTitle,
+        items: filtered.map((item) => ({
+          chapterNum: item.chapterNum,
+          chapterUrl: item.chapterUrl,
+          episodeTitle: item.episodeTitle,
+          sourceId: item.sourceId,
+        })),
+      });
     },
-    [processQueue, downloadedChapters],
+    [trpcClient, mangaId, mangaTitle, downloadedChapters],
   );
 
   const cancelQueue = useCallback(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    processingRef.current = false;
-    setQueue([]);
-    setCurrentProgress(null);
-  }, []);
+    trpcClient.download.cancel.mutate({ mangaId });
+    setServerState(null);
+  }, [trpcClient, mangaId]);
 
-  const isDownloading = processingRef.current && !abortControllerRef.current?.signal.aborted;
+  const { queue, currentProgress, isProcessing } = useMemo(() => snapshotToProgress(serverState), [serverState]);
 
   return {
     queue,
@@ -189,6 +171,6 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
     enqueueChapter,
     enqueueMany,
     cancelQueue,
-    isDownloading,
+    isDownloading: isProcessing,
   };
 }
