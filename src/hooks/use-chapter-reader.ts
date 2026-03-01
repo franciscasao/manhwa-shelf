@@ -17,11 +17,9 @@ function buildImageUrls(data: {
   collectionId: string;
   images: string[];
 }): string[] {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_POCKETBASE_URL ?? "http://127.0.0.1:8090";
   return data.images.map(
     (filename) =>
-      `${baseUrl}/api/files/${data.collectionId}/${data.recordId}/${filename}`,
+      `/api/chapter/image?c=${data.collectionId}&r=${data.recordId}&f=${filename}`,
   );
 }
 

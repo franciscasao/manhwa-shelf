@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 
-const PRELOAD_AHEAD = 3;
+const PRELOAD_AHEAD = 5;
 const MAX_RETRIES = 3;
 
 type ImageState = "pending" | "loading" | "loaded" | "error";
