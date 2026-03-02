@@ -14,6 +14,8 @@ interface MangaTerminalCardProps {
   titleClass?: string;
   /** Apply grayscale on image for "ghost" items (default: true, based on status) */
   showGhost?: boolean;
+  /** Show download progress, status badge, chapter counts, and disk size (default: true) */
+  showProgress?: boolean;
   /** Slot for the bottom action button */
   action: React.ReactNode;
 }
@@ -24,6 +26,7 @@ export function MangaTerminalCard({
   accentColor,
   titleClass,
   showGhost = true,
+  showProgress = true,
   action,
 }: MangaTerminalCardProps) {
   const status = getDownloadStatus(manga);
@@ -88,19 +91,23 @@ export function MangaTerminalCard({
             {manga.author}
           </div>
 
-          <div className="mt-1">
-            <ProgressDisplay manga={manga} />
-          </div>
+          {showProgress && (
+            <>
+              <div className="mt-1">
+                <ProgressDisplay manga={manga} />
+              </div>
 
-          <div className="flex items-center gap-2">
-            <StatusBadge status={status} />
-            <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
-              {chaptersStr} ch
-            </span>
-          </div>
-          <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
-            {manga.sizeOnDisk}
-          </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge status={status} />
+                <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
+                  {chaptersStr} ch
+                </span>
+              </div>
+              <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
+                {manga.sizeOnDisk}
+              </div>
+            </>
+          )}
         </div>
       </Link>
 

@@ -63,11 +63,8 @@ export function CatalogGrid() {
                 key={manga.id}
                 manga={manga}
                 index={index}
-                action={
-                  <div className="px-2 pb-2 text-[0.6rem] text-terminal-dim">
-                    {manga.chapters.downloaded} ch archived
-                  </div>
-                }
+                showProgress={false}
+                action={null}
               />
             ))}
           </div>

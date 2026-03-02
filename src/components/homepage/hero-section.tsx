@@ -1,14 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { useTRPC } from "@/trpc/client";
 import { useAuth } from "@/hooks/use-auth";
 
 export function HeroSection() {
-  const trpc = useTRPC();
   const { user } = useAuth();
-  const { data: stats } = useQuery(trpc.catalog.getStats.queryOptions());
 
   return (
     <section className="relative border border-terminal-border/40 px-6 py-10 md:px-10 md:py-14 mb-8 overflow-hidden">
@@ -36,29 +32,11 @@ export function HeroSection() {
         </h1>
 
         {/* Tagline */}
-        <p className="text-sm md:text-base text-terminal-dim mb-6 max-w-lg">
+        <p className="text-sm md:text-base text-terminal-dim mb-8 max-w-lg">
           A local manga &amp; manhwa archive with a retro-terminal interface.
           Browse the catalog and read downloaded chapters
           <span className="blink-cursor">_</span>
         </p>
-
-        {/* Stats line */}
-        {stats && (
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs mb-8">
-            <span>
-              <span className="text-terminal-muted">titles:</span>{" "}
-              <span className="text-terminal-cyan">{stats.totalTitles}</span>
-            </span>
-            <span>
-              <span className="text-terminal-muted">chapters:</span>{" "}
-              <span className="text-terminal-cyan">{stats.totalChapters}</span>
-            </span>
-            <span>
-              <span className="text-terminal-muted">disk:</span>{" "}
-              <span className="text-terminal-cyan">{stats.totalSizeGB.toFixed(1)} GB</span>
-            </span>
-          </div>
-        )}
 
         {/* CTAs */}
         <div className="flex flex-wrap gap-3">
