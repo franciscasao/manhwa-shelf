@@ -4,11 +4,16 @@ import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { AuthGuard } from "@/components/auth-guard";
 
-const PUBLIC_ROUTES = ["/login"];
+function isPublicRoute(pathname: string): boolean {
+  if (pathname === "/" || pathname === "/login") return true;
+  if (/^\/manhwa\/[^/]+$/.test(pathname)) return true;
+  if (/^\/manhwa\/[^/]+\/read\/[^/]+$/.test(pathname)) return true;
+  return false;
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPublic = PUBLIC_ROUTES.includes(pathname);
+  const isPublic = isPublicRoute(pathname);
 
   return (
     <>

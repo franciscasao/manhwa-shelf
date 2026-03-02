@@ -19,6 +19,8 @@ interface ChapterDirectoryProps {
   isRefreshing?: boolean;
   isLoadingChapters?: boolean;
   sourceError?: string | null;
+  readOnly?: boolean;
+  downloadedChaptersList?: { chapterNum: number; title: string }[];
 }
 
 const PER_PAGE = 50;
@@ -313,10 +315,63 @@ export function ChapterDirectory({
   isRefreshing,
   isLoadingChapters,
   sourceError,
+  readOnly,
+  downloadedChaptersList,
 }: ChapterDirectoryProps) {
   const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
     useChapterDownload(mangaId, mangaTitle);
   const [page, setPage] = useState(0);
+
+  // Read-only mode: show only downloaded chapters
+  if (readOnly && downloadedChaptersList) {
+    if (downloadedChaptersList.length === 0) {
+      return (
+        <DirectoryShell>
+          <div className="text-xs text-terminal-dim">{">"} no chapters available for reading</div>
+        </DirectoryShell>
+      );
+    }
+
+    const totalPages = Math.ceil(downloadedChaptersList.length / PER_PAGE);
+    const start = page * PER_PAGE;
+    const slice = downloadedChaptersList.slice(start, start + PER_PAGE);
+
+    return (
+      <DirectoryShell entryCount={downloadedChaptersList.length} cached={downloadedChaptersList.length}>
+        <div className="space-y-0">
+          {slice.map((ch) => {
+            const num = String(ch.chapterNum).padStart(3, "0");
+            const readHref = anilistId ? `/manhwa/${anilistId}/read/${ch.chapterNum}` : null;
+            return (
+              <div key={ch.chapterNum}>
+                {readHref ? (
+                  <Link href={readHref} className="block">
+                    <div className="text-terminal-green flex items-center gap-2 text-[0.65rem] leading-relaxed hover:bg-terminal-row-hover cursor-pointer">
+                      <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">drwxr-xr-x</span>
+                      <span className="w-[30px] shrink-0">{num}</span>
+                      <span className="truncate flex-1 min-w-0">{ch.title}</span>
+                      <span className="w-[70px] shrink-0 hidden sm:inline">{"\u2588".repeat(8)}</span>
+                      <span className="shrink-0 w-[36px] text-right">DONE</span>
+                      <span className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">[ READ ]</span>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="text-terminal-green flex items-center gap-2 text-[0.65rem] leading-relaxed">
+                    <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">drwxr-xr-x</span>
+                    <span className="w-[30px] shrink-0">{num}</span>
+                    <span className="truncate flex-1 min-w-0">{ch.title}</span>
+                    <span className="w-[70px] shrink-0 hidden sm:inline">{"\u2588".repeat(8)}</span>
+                    <span className="shrink-0 w-[36px] text-right">DONE</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <Pagination page={page} totalPages={totalPages} setPage={setPage} />
+      </DirectoryShell>
+    );
+  }
 
   const hasChapters = chapters && chapters.length > 0;
 

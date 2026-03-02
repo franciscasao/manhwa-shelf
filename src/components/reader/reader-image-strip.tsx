@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 
-const PRELOAD_AHEAD = 3;
+const PRELOAD_AHEAD = 5;
 const MAX_RETRIES = 3;
 
 type ImageState = "pending" | "loading" | "loaded" | "error";
@@ -183,6 +183,7 @@ export function ReaderImageStrip({
                       : url
                   }
                   alt={`Page ${i + 1}`}
+                  loading={i <= PRELOAD_AHEAD ? "eager" : "lazy"}
                   className={`w-full block reader-image ${isLoaded ? "" : "h-0 overflow-hidden"}`}
                   onLoad={(e) =>
                     handleImageLoad(i, e.target as HTMLImageElement)

@@ -10,6 +10,7 @@ interface ManhwaHeaderProps {
   shelfEntry: Manga | undefined;
   onAdd: () => void;
   onRemove: () => void;
+  readOnly?: boolean;
 }
 
 export function ManhwaHeader({
@@ -17,6 +18,7 @@ export function ManhwaHeader({
   shelfEntry,
   onAdd,
   onRemove,
+  readOnly,
 }: ManhwaHeaderProps) {
   const title = media.title.english ?? media.title.romaji;
   const romaji = media.title.english ? media.title.romaji : null;
@@ -94,27 +96,29 @@ export function ManhwaHeader({
         )}
 
         {/* Add/Remove button */}
-        {isOnShelf ? (
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-xs text-terminal-green">
-              <Check className="h-3.5 w-3.5" />
-              ON SHELF
-            </span>
+        {!readOnly && (
+          isOnShelf ? (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-xs text-terminal-green">
+                <Check className="h-3.5 w-3.5" />
+                ON SHELF
+              </span>
+              <button
+                onClick={onRemove}
+                className="flex items-center gap-1 text-xs text-terminal-dim hover:text-red-500 transition-colors"
+              >
+                <Trash2 className="h-3 w-3" />
+                remove
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={onRemove}
-              className="flex items-center gap-1 text-xs text-terminal-dim hover:text-red-500 transition-colors"
+              onClick={onAdd}
+              className="flex items-center gap-1.5 border border-terminal-cyan/40 px-3 py-1.5 text-xs text-terminal-cyan hover:bg-terminal-cyan/10 transition-colors"
             >
-              <Trash2 className="h-3 w-3" />
-              remove
+              <Plus className="h-3.5 w-3.5" />[ ADD TO SHELF ]
             </button>
-          </div>
-        ) : (
-          <button
-            onClick={onAdd}
-            className="flex items-center gap-1.5 border border-terminal-cyan/40 px-3 py-1.5 text-xs text-terminal-cyan hover:bg-terminal-cyan/10 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />[ ADD TO SHELF ]
-          </button>
+          )
         )}
       </div>
     </div>

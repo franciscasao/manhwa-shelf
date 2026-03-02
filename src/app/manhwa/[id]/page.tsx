@@ -7,6 +7,9 @@ import { toPocketBaseId } from "@/lib/manga-utils";
 import type { MangaOrigin } from "@/lib/types";
 import type { AniListExternalLink } from "@/lib/anilist";
 import { findSourceLink, type SourceIdentifier } from "@/extensions";
+import { useQuery } from "@tanstack/react-query";
+import { useTRPC } from "@/trpc/client";
+import { useAuth } from "@/hooks/use-auth";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
 import { useSourceChapters } from "@/hooks/use-source-chapters";
@@ -27,6 +30,9 @@ export default function ManhwaDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params.id);
+  const { user } = useAuth();
+  const trpc = useTRPC();
+  const isAuthenticated = !!user;
 
   const { media, isLoading, error: fetchError } = useMediaDetail(id);
   const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
@@ -39,7 +45,16 @@ export default function ManhwaDetailPage() {
     isRefreshing,
     isLoading: isLoadingChapters,
     error: sourceError,
-  } = useSourceChapters(activeSource);
+  } = useSourceChapters(isAuthenticated ? activeSource : null);
+
+  // Fetch downloaded chapters for read-only (public) view
+  const mangaIdForQuery = toPocketBaseId(id);
+  const { data: downloadedChaptersList } = useQuery(
+    trpc.catalog.getDownloadedChapters.queryOptions(
+      { mangaId: mangaIdForQuery },
+      { enabled: !isAuthenticated && !!id && !isNaN(id) },
+    ),
+  );
 
   const mangaTitle = media?.title?.english || media?.title?.romaji || "Unknown";
 
@@ -56,10 +71,10 @@ export default function ManhwaDetailPage() {
   const mangaId = toPocketBaseId(id);
   const resolvedTotal = chapters?.length ?? media?.chapters ?? null;
   useEffect(() => {
-    if (resolvedTotal && isOnShelf(mangaId)) {
+    if (isAuthenticated && resolvedTotal && isOnShelf(mangaId)) {
       updateChaptersTotal(mangaId, resolvedTotal);
     }
-  }, [resolvedTotal, mangaId, isOnShelf, updateChaptersTotal]);
+  }, [isAuthenticated, resolvedTotal, mangaId, isOnShelf, updateChaptersTotal]);
 
   const handleAdd = () => {
     if (!media) return;
@@ -125,7 +140,7 @@ export default function ManhwaDetailPage() {
           <div className="space-y-5">
             {/* Header section */}
             <div className="detail-section" style={{ animationDelay: "0ms" }}>
-              <ManhwaHeader media={media} shelfEntry={shelfEntry} onAdd={handleAdd} onRemove={handleRemove} />
+              <ManhwaHeader media={media} shelfEntry={shelfEntry} onAdd={handleAdd} onRemove={handleRemove} readOnly={!isAuthenticated} />
             </div>
 
             {/* Metadata */}
@@ -138,10 +153,12 @@ export default function ManhwaDetailPage() {
               <ManhwaSynopsis description={media.description} />
             </div>
 
-            {/* External Sources */}
-            <div className="detail-section" style={{ animationDelay: "250ms" }}>
-              <ManhwaExternalLinks externalLinks={media.externalLinks} activeSourceUrl={activeSource?.url} />
-            </div>
+            {/* External Sources (auth only) */}
+            {isAuthenticated && (
+              <div className="detail-section" style={{ animationDelay: "250ms" }}>
+                <ManhwaExternalLinks externalLinks={media.externalLinks} activeSourceUrl={activeSource?.url} />
+              </div>
+            )}
 
             {/* Chapter Directory */}
             <div className="detail-section" style={{ animationDelay: "300ms" }}>
@@ -158,6 +175,8 @@ export default function ManhwaDetailPage() {
                 isRefreshing={isRefreshing}
                 isLoadingChapters={isLoadingChapters}
                 sourceError={sourceError}
+                readOnly={!isAuthenticated}
+                downloadedChaptersList={downloadedChaptersList}
               />
             </div>
 
