@@ -61,6 +61,17 @@ const DETAIL_QUERY = `
           }
         }
       }
+      recommendations(perPage: 10, sort: RATING_DESC) {
+        nodes {
+          rating
+          mediaRecommendation {
+            id
+            title { english romaji }
+            coverImage { large }
+            type
+          }
+        }
+      }
     }
   }
 `;

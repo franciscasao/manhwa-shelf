@@ -60,6 +60,17 @@ export interface AniListMediaDetail extends AniListMedia {
       };
     }[];
   } | null;
+  recommendations: {
+    nodes: {
+      rating: number;
+      mediaRecommendation: {
+        id: number;
+        title: { english: string | null; romaji: string };
+        coverImage: { large: string };
+        type: string;
+      } | null;
+    }[];
+  } | null;
 }
 
 export interface PageInfo {

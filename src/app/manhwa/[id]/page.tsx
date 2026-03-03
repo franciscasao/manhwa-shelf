@@ -20,6 +20,7 @@ import { ManhwaSynopsis } from "@/components/manhwa/manhwa-synopsis";
 import { ChapterDirectory } from "@/components/manhwa/chapter-directory";
 import { ManhwaExternalLinks } from "@/components/manhwa/manhwa-external-links";
 import { ManhwaRelations } from "@/components/manhwa/manhwa-relations";
+import { ManhwaRecommendations } from "@/components/manhwa/manhwa-recommendations";
 
 function findActiveSource(links: AniListExternalLink[] | null | undefined): SourceIdentifier | null {
   if (!links) return null;
@@ -185,10 +186,15 @@ export default function ManhwaDetailPage() {
               <ManhwaRelations relations={media.relations} />
             </div>
 
+            {/* Recommendations */}
+            <div className="detail-section" style={{ animationDelay: "450ms" }}>
+              <ManhwaRecommendations recommendations={media.recommendations} />
+            </div>
+
             {/* Footer */}
             <div
               className="border-t border-terminal-border pt-3 text-[0.6rem] font-mono text-terminal-muted detail-section"
-              style={{ animationDelay: "500ms" }}
+              style={{ animationDelay: "550ms" }}
             >
               <span className="text-terminal-dim">[</span>
               <span className="text-terminal-green">DB</span>

@@ -39,27 +39,34 @@ export function useShelf() {
       });
 
     // Real-time subscription for cross-device sync
-    pb.collection("shelf").subscribe("*", (e) => {
-      setShelf((prev) => {
-        const current = prev ?? [];
-        if (e.action === "create") {
-          return [...current, recordToManga(e.record)];
-        }
-        if (e.action === "update") {
-          return current.map((m) =>
-            m.id === e.record["id"] ? recordToManga(e.record) : m,
-          );
-        }
-        if (e.action === "delete") {
-          return current.filter((m) => m.id !== e.record["id"]);
-        }
-        return current;
-      });
-    });
+    let subscribed = false;
+    pb.collection("shelf")
+      .subscribe("*", (e) => {
+        setShelf((prev) => {
+          const current = prev ?? [];
+          if (e.action === "create") {
+            return [...current, recordToManga(e.record)];
+          }
+          if (e.action === "update") {
+            return current.map((m) =>
+              m.id === e.record["id"] ? recordToManga(e.record) : m,
+            );
+          }
+          if (e.action === "delete") {
+            return current.filter((m) => m.id !== e.record["id"]);
+          }
+          return current;
+        });
+      })
+      .then(() => {
+        subscribed = true;
+        if (cancelled) pb.collection("shelf").unsubscribe("*");
+      })
+      .catch(() => {});
 
     return () => {
       cancelled = true;
-      pb.collection("shelf").unsubscribe("*");
+      if (subscribed) pb.collection("shelf").unsubscribe("*");
     };
   }, []);
 

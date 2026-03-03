@@ -50,8 +50,8 @@ interface ApiEnvelope {
   data: string;
 }
 
-async function apiCall<T>(endpoint: string, params: Record<string, string> = {}): Promise<{ data: T; did: string }> {
-  const did = generateRandomString(32);
+async function apiCall<T>(endpoint: string, params: Record<string, string> = {}, existingDid?: string): Promise<{ data: T; did: string }> {
+  const did = existingDid ?? generateRandomString(24);
   const ts = Date.now();
   const searchParams = new URLSearchParams({ ...params, did, ts: String(ts) });
   const url = `${API_BASE}${endpoint}?${searchParams.toString()}`;
@@ -61,21 +61,18 @@ async function apiCall<T>(endpoint: string, params: Record<string, string> = {})
       "User-Agent": USER_AGENT,
       Referer: "https://qtoon.com",
       platform: "pc",
-      lth: "en-UI",
+      lth: "en-US",
       Accept: "application/json",
       did,
     },
   });
-  console.log("============= res: ", res);
 
   if (!res.ok) {
     throw new Error(`QToon API returned ${res.status} for ${endpoint}`);
   }
 
   const envelope = (await res.json()) as ApiEnvelope;
-  console.log("============= envelope: ", envelope);
   const data = decryptApiResponse<T>(envelope.data, envelope.ts, did);
-  console.log("============= data: ", data);
 
   return { data, did };
 }
@@ -95,7 +92,7 @@ interface EpisodeDetailResponse {
 }
 
 interface ResourceGroupResponse {
-  resources: Array<{ url: string }>;
+  resources: Array<{ url: string; rgIdx: number }>;
   more: 0 | 1;
 }
 
@@ -122,8 +119,7 @@ const qtoon: Source = {
     Referer: "https://qtoon.com/",
   },
 
-  // Placeholder — update with actual CDN domain after first successful download
-  imageDomains: ["qtoon.com"],
+  imageDomains: ["qtoon.com", "cdn.qtoon.com", "img.qtoon.com", "d2lerpsp24x5rp.cloudfront.net"],
 
   parseUrl(url: string): SourceIdentifier | null {
     try {
@@ -162,24 +158,28 @@ const qtoon: Source = {
     }
     const esid = match[1];
 
-    // Fetch episode definitions; the did from this call is used to decrypt image URLs
-    const { data: episodeDetail, did: episodeDid } = await apiCall<EpisodeDetailResponse>(
+    // Use a single did for all requests in this session so decryption keys match
+    const did = generateRandomString(24);
+
+    const { data: episodeDetail } = await apiCall<EpisodeDetailResponse>(
       "/api/w/comic/episode/detail",
       { esid },
+      did,
     );
 
-    const pages: SourcePage[] = [];
+    const rawPages: Array<{ url: string; rgIdx: number }> = [];
 
     for (const def of episodeDetail.definitions ?? []) {
       let page = 0;
       while (true) {
-        const { data: group } = await apiCall<ResourceGroupResponse>("/api/w/resource/group/rslv", {
-          token: def.token,
-          rg: String(page),
-        });
+        const { data: group } = await apiCall<ResourceGroupResponse>(
+          "/api/w/resource/group/rslv",
+          { token: def.token, rg: String(page) },
+          did,
+        );
 
         for (const resource of group.resources ?? []) {
-          pages.push({ url: decryptImageUrl(resource.url, episodeDid) });
+          rawPages.push({ url: resource.url, rgIdx: resource.rgIdx });
         }
 
         if (group.more !== 1) break;
@@ -187,7 +187,9 @@ const qtoon: Source = {
       }
     }
 
-    return pages;
+    // Sort by rgIdx to ensure correct page order, then decrypt URLs
+    rawPages.sort((a, b) => a.rgIdx - b.rgIdx);
+    return rawPages.map((p) => ({ url: decryptImageUrl(p.url, did) }));
   },
 
   async fetchMangaDetails(seriesId: string): Promise<SourceMangaDetails> {
