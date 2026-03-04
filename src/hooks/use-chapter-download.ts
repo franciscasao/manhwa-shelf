@@ -168,6 +168,7 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
     queue,
     currentProgress,
     downloadedChapters,
+    isLoadingDownloads: downloadRecords === undefined,
     enqueueChapter,
     enqueueMany,
     cancelQueue,

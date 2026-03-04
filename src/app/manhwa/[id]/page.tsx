@@ -188,7 +188,7 @@ export default function ManhwaDetailPage() {
 
             {/* Recommendations */}
             <div className="detail-section" style={{ animationDelay: "450ms" }}>
-              <ManhwaRecommendations recommendations={media.recommendations} />
+              <ManhwaRecommendations recommendations={media.recommendations} isOnShelf={isOnShelf} />
             </div>
 
             {/* Footer */}

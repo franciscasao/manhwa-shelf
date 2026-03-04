@@ -95,11 +95,6 @@ function getChapterStatus(
     colorClass = "text-terminal-green";
     bar = "\u2588".repeat(8);
     perm = "drwxr-xr-x";
-  } else if (index === downloaded + 1 && isOnShelf) {
-    status = "SYNC";
-    colorClass = "text-terminal-cyan";
-    bar = "\u2588".repeat(4) + "\u2591".repeat(4);
-    perm = "drwxr-xr-x";
   } else {
     status = "WAIT";
     colorClass = "text-terminal-dim";
@@ -318,8 +313,16 @@ export function ChapterDirectory({
   readOnly,
   downloadedChaptersList,
 }: ChapterDirectoryProps) {
-  const { queue, currentProgress, downloadedChapters, enqueueChapter, enqueueMany, cancelQueue, isDownloading } =
-    useChapterDownload(mangaId, mangaTitle);
+  const {
+    queue,
+    currentProgress,
+    downloadedChapters,
+    isLoadingDownloads,
+    enqueueChapter,
+    enqueueMany,
+    cancelQueue,
+    isDownloading,
+  } = useChapterDownload(mangaId, mangaTitle);
   const [page, setPage] = useState(0);
 
   // Read-only mode: show only downloaded chapters
@@ -352,7 +355,9 @@ export function ChapterDirectory({
                       <span className="truncate flex-1 min-w-0">{ch.title}</span>
                       <span className="w-[70px] shrink-0 hidden sm:inline">{"\u2588".repeat(8)}</span>
                       <span className="shrink-0 w-[36px] text-right">DONE</span>
-                      <span className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">[ READ ]</span>
+                      <span className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">
+                        [ READ ]
+                      </span>
                     </div>
                   </Link>
                 ) : (
@@ -449,7 +454,7 @@ export function ChapterDirectory({
         <div className="space-y-0">
           {slice.map((ch, idx) => {
             const chapterNum = start + idx + 1;
-            const canDl = sourceId && !isDownloading && !downloadedChapters.has(chapterNum);
+            const canDl = sourceId && !isDownloading && !isLoadingDownloads && !downloadedChapters.has(chapterNum);
             return (
               <ChapterRow
                 key={chapterNum}
@@ -484,7 +489,9 @@ export function ChapterDirectory({
       <DirectoryShell onRefresh={onRefresh} isRefreshing={isRefreshing}>
         <div className="text-xs space-y-1">
           <div className="text-terminal-orange">{">"} source fetch failed</div>
-          <div className="text-terminal-dim">{">"} {sourceError}</div>
+          <div className="text-terminal-dim">
+            {">"} {sourceError}
+          </div>
         </div>
       </DirectoryShell>
     );
