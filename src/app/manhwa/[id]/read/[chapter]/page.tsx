@@ -4,6 +4,8 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toPocketBaseId } from "@/lib/manga-utils";
 import { useChapterReader, usePrefetchChapter } from "@/hooks/use-chapter-reader";
+import { useShelf } from "@/hooks/use-shelf";
+import { useReadingProgress, useSaveReadingProgress } from "@/hooks/use-reading-history";
 import { ReaderToolbar } from "@/components/reader/reader-toolbar";
 import { ReaderImageStrip } from "@/components/reader/reader-image-strip";
 import { ReaderBottomNav } from "@/components/reader/reader-bottom-nav";
@@ -18,6 +20,17 @@ export default function ChapterReaderPage() {
   const { chapter, isLoading, error } = useChapterReader(mangaId, chapterNum);
   const prefetchNext = usePrefetchChapter(mangaId, chapter?.nextChapter ?? null);
   const hasPrefetchedRef = useRef(false);
+
+  // Shelf data for manga title and cover image (used for history)
+  const { shelf } = useShelf();
+  const manga = shelf.find((m) => m.id === mangaId);
+  const mangaTitle = manga?.title ?? chapter?.episodeTitle ?? "";
+  const coverImage = manga?.coverImage ?? "";
+
+  // Reading history: saved page to resume from
+  const savedProgress = useReadingProgress(mangaId, chapterNum);
+  const resumePageIndex = savedProgress?.pageIndex ?? 0;
+  const saveProgress = useSaveReadingProgress(mangaId, chapterNum, mangaTitle, coverImage);
 
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -73,15 +86,19 @@ export default function ChapterReaderPage() {
   }, [router, anilistId, chapter?.prevChapter, chapter?.nextChapter]);
 
   const handleProgressChange = useCallback(
-    (p: number) => {
+    (p: number, pageIndex: number) => {
       setProgress(p);
+      // Save reading progress (debounced)
+      if (chapter?.imageUrls.length) {
+        saveProgress(pageIndex, chapter.imageUrls.length);
+      }
       // Prefetch the next chapter when user reaches 80%
       if (p >= 80 && !hasPrefetchedRef.current) {
         hasPrefetchedRef.current = true;
         prefetchNext();
       }
     },
-    [prefetchNext],
+    [prefetchNext, saveProgress, chapter?.imageUrls.length],
   );
 
   const handleTap = useCallback(() => {
@@ -158,6 +175,7 @@ export default function ChapterReaderPage() {
               imageUrls={chapter.imageUrls}
               onProgressChange={handleProgressChange}
               onTap={handleTap}
+              resumePageIndex={resumePageIndex}
             />
 
             <div className="mx-auto max-w-[800px] mt-4 mb-8 px-3">

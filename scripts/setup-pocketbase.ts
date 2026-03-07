@@ -65,6 +65,27 @@ async function main() {
       deleteRule: "@request.auth.id != '' && @request.auth.verified = true",
     },
     {
+      name: "readingHistory",
+      type: "base",
+      fields: [
+        { name: "mangaId", type: "text", required: true },
+        { name: "chapterNum", type: "number", required: true },
+        { name: "pageIndex", type: "number" },
+        { name: "totalPages", type: "number" },
+        { name: "mangaTitle", type: "text" },
+        { name: "coverImage", type: "text" },
+      ],
+      indexes: [
+        "CREATE UNIQUE INDEX idx_readingHistory_manga_chapter ON readingHistory (mangaId, chapterNum)",
+        "CREATE INDEX idx_readingHistory_mangaId ON readingHistory (mangaId)",
+      ],
+      listRule: "@request.auth.id != '' && @request.auth.verified = true",
+      viewRule: "@request.auth.id != '' && @request.auth.verified = true",
+      createRule: "@request.auth.id != '' && @request.auth.verified = true",
+      updateRule: "@request.auth.id != '' && @request.auth.verified = true",
+      deleteRule: "@request.auth.id != '' && @request.auth.verified = true",
+    },
+    {
       name: "chapterCache",
       type: "base",
       fields: [

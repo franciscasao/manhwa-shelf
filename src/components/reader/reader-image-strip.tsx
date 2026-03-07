@@ -16,27 +16,31 @@ interface ImageEntry {
 
 interface ReaderImageStripProps {
   imageUrls: string[];
-  onProgressChange: (progress: number) => void;
+  onProgressChange: (progress: number, pageIndex: number) => void;
   onTap: () => void;
+  resumePageIndex?: number;
 }
 
 export function ReaderImageStrip({
   imageUrls,
   onProgressChange,
   onTap,
+  resumePageIndex = 0,
 }: ReaderImageStripProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const maxVisibleRef = useRef(0);
+  const maxVisibleRef = useRef(resumePageIndex);
+  const hasScrolledToResume = useRef(false);
 
-  // Initialize with the first batch already in "loading" state.
-  // The parent should use a key prop to remount this component on chapter change.
-  const [images, setImages] = useState<ImageEntry[]>(() =>
-    Array.from({ length: imageUrls.length }, (_, i) => ({
-      state: (i <= PRELOAD_AHEAD ? "loading" : "pending") as ImageState,
+  // Initialize loading: load a window around the resume page first, then load from 0
+  const [images, setImages] = useState<ImageEntry[]>(() => {
+    const start = Math.max(0, resumePageIndex);
+    const end = Math.min(imageUrls.length - 1, start + PRELOAD_AHEAD);
+    return Array.from({ length: imageUrls.length }, (_, i) => ({
+      state: (i >= start && i <= end ? "loading" : "pending") as ImageState,
       retries: 0,
-    })),
-  );
+    }));
+  });
 
   // Mark an image as loading when it enters the preload window
   const triggerLoad = useCallback((index: number) => {
@@ -89,6 +93,31 @@ export function ReaderImageStrip({
     });
   }, []);
 
+  // After the resume page image loads, scroll to it once
+  useEffect(() => {
+    if (hasScrolledToResume.current || resumePageIndex <= 0) {
+      hasScrolledToResume.current = true;
+      return;
+    }
+    const entry = images[resumePageIndex];
+    if (entry?.state === "loaded") {
+      const el = imageRefs.current[resumePageIndex];
+      if (el) {
+        el.scrollIntoView({ behavior: "instant", block: "start" });
+        hasScrolledToResume.current = true;
+      }
+    }
+  }, [images, resumePageIndex]);
+
+  // Also preload images before resume page (load pages 0..resumePageIndex-1) after initial render
+  useEffect(() => {
+    if (resumePageIndex <= 0) return;
+    // Kick off loading for pages before the resume point in the background
+    for (let i = 0; i < resumePageIndex; i++) {
+      triggerLoad(i);
+    }
+  }, [resumePageIndex, triggerLoad]);
+
   // Track scroll progress via IntersectionObserver + preload ahead
   useEffect(() => {
     const refs = imageRefs.current.filter(Boolean) as HTMLDivElement[];
@@ -108,9 +137,8 @@ export function ReaderImageStrip({
             }
           }
         }
-        onProgressChange(
-          ((maxVisibleRef.current + 1) / imageUrls.length) * 100,
-        );
+        const pageIndex = maxVisibleRef.current;
+        onProgressChange(((pageIndex + 1) / imageUrls.length) * 100, pageIndex);
       },
       { threshold: 0.1 },
     );
@@ -183,7 +211,7 @@ export function ReaderImageStrip({
                       : url
                   }
                   alt={`Page ${i + 1}`}
-                  loading={i <= PRELOAD_AHEAD ? "eager" : "lazy"}
+                  loading={i >= resumePageIndex && i <= resumePageIndex + PRELOAD_AHEAD ? "eager" : "lazy"}
                   className={`w-full block reader-image ${isLoaded ? "" : "h-0 overflow-hidden"}`}
                   onLoad={(e) =>
                     handleImageLoad(i, e.target as HTMLImageElement)
