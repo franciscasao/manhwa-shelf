@@ -43,3 +43,6 @@ next-env.d.ts
 
 # downloads
 /downloads
+
+pocketbase/pb_data/*
+!pocketbase/pb_data/.keep
