@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -16,9 +16,17 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "700"],
 });
 
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "manhwa-shelf",
   description: "Track and manage your manga & manhwa reading list",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({

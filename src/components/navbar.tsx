@@ -17,13 +17,14 @@ export function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  // Don't show nav on login page
+  // Don't show nav on login page or reader pages
   if (pathname === "/login") return null;
+  if (/^\/manhwa\/\d+\/read\/\d+/.test(pathname)) return null;
 
   const links = user ? [...publicLinks, ...authLinks] : publicLinks;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-terminal-border bg-terminal-bg font-mono">
+    <header className="sticky top-0 z-50 w-full border-b border-terminal-border bg-terminal-bg font-mono pt-[env(safe-area-inset-top)]">
       <div className="container mx-auto flex h-14 items-center px-4">
         <Link href="/" className="mr-8 text-terminal-green font-bold text-lg">
           &gt; manhwa-shelf

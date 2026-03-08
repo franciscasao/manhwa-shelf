@@ -25,7 +25,7 @@ export function ReaderToolbar({
         visible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
-      <div className="bg-terminal-bg/90 backdrop-blur-sm border-b border-terminal-border/40">
+      <div className="bg-terminal-bg/90 backdrop-blur-sm border-b border-terminal-border/40 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto max-w-[900px] px-3 py-2 flex items-center justify-between text-xs">
           {/* Left: back + title */}
           <div className="flex items-center gap-3 min-w-0">
