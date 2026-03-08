@@ -4,6 +4,7 @@ import { sourceRouter } from "@/trpc/routers/source";
 import { chapterRouter } from "@/trpc/routers/chapter";
 import { downloadRouter } from "@/trpc/routers/download";
 import { catalogRouter } from "@/trpc/routers/catalog";
+import { historyRouter } from "@/trpc/routers/history";
 
 export const appRouter = createTRPCRouter({
   anilist: anilistRouter,
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   chapter: chapterRouter,
   download: downloadRouter,
   catalog: catalogRouter,
+  history: historyRouter,
 });
 
 export type AppRouter = typeof appRouter;
