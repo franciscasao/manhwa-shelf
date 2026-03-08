@@ -28,7 +28,6 @@ const PER_PAGE = 50;
 function getChapterStatus(
   index: number,
   downloaded: number,
-  isOnShelf: boolean,
   sessionDownloaded?: Set<number>,
   currentProgress?: ChapterProgress | null,
 ) {
@@ -79,7 +78,7 @@ function getChapterStatus(
     return {
       status: "DONE" as const,
       colorClass: "text-terminal-green",
-      bar: "\u2588".repeat(8),
+      bar: "",
       perm: "drwxr-xr-x",
       statusLabel: "DONE",
     };
@@ -93,12 +92,12 @@ function getChapterStatus(
   if (index <= downloaded) {
     status = "DONE";
     colorClass = "text-terminal-green";
-    bar = "\u2588".repeat(8);
+    bar = "";
     perm = "drwxr-xr-x";
   } else {
     status = "WAIT";
     colorClass = "text-terminal-dim";
-    bar = "\u2591".repeat(8);
+    bar = "";
     perm = "-rw-r--r--";
   }
 
@@ -201,7 +200,6 @@ function ChapterRow({
   chapterNum,
   label,
   downloaded,
-  isOnShelf,
   downloadedChapters,
   currentProgress,
   anilistId,
@@ -210,7 +208,6 @@ function ChapterRow({
   chapterNum: number;
   label: string;
   downloaded: number;
-  isOnShelf: boolean;
   downloadedChapters: Set<number>;
   currentProgress: ChapterProgress | null;
   anilistId?: number;
@@ -220,7 +217,6 @@ function ChapterRow({
   const { colorClass, bar, perm, statusLabel } = getChapterStatus(
     chapterNum,
     downloaded,
-    isOnShelf,
     downloadedChapters,
     currentProgress,
   );
@@ -338,40 +334,22 @@ export function ChapterDirectory({
     const totalPages = Math.ceil(downloadedChaptersList.length / PER_PAGE);
     const start = page * PER_PAGE;
     const slice = downloadedChaptersList.slice(start, start + PER_PAGE);
+    const readOnlyDownloaded = new Set(downloadedChaptersList.map((ch) => ch.chapterNum));
 
     return (
       <DirectoryShell entryCount={downloadedChaptersList.length} cached={downloadedChaptersList.length}>
         <div className="space-y-0">
-          {slice.map((ch) => {
-            const num = String(ch.chapterNum).padStart(3, "0");
-            const readHref = anilistId ? `/manhwa/${anilistId}/read/${ch.chapterNum}` : null;
-            return (
-              <div key={ch.chapterNum}>
-                {readHref ? (
-                  <Link href={readHref} className="block">
-                    <div className="text-terminal-green flex items-center gap-2 text-[0.65rem] leading-relaxed hover:bg-terminal-row-hover cursor-pointer">
-                      <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">drwxr-xr-x</span>
-                      <span className="w-[30px] shrink-0">{num}</span>
-                      <span className="truncate flex-1 min-w-0">{ch.title}</span>
-                      <span className="w-[70px] shrink-0 hidden sm:inline">{"\u2588".repeat(8)}</span>
-                      <span className="shrink-0 w-[36px] text-right">DONE</span>
-                      <span className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">
-                        [ READ ]
-                      </span>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="text-terminal-green flex items-center gap-2 text-[0.65rem] leading-relaxed">
-                    <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">drwxr-xr-x</span>
-                    <span className="w-[30px] shrink-0">{num}</span>
-                    <span className="truncate flex-1 min-w-0">{ch.title}</span>
-                    <span className="w-[70px] shrink-0 hidden sm:inline">{"\u2588".repeat(8)}</span>
-                    <span className="shrink-0 w-[36px] text-right">DONE</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {slice.map((ch) => (
+            <ChapterRow
+              key={ch.chapterNum}
+              chapterNum={ch.chapterNum}
+              label={ch.title}
+              downloaded={0}
+              downloadedChapters={readOnlyDownloaded}
+              currentProgress={null}
+              anilistId={anilistId}
+            />
+          ))}
         </div>
         <Pagination page={page} totalPages={totalPages} setPage={setPage} />
       </DirectoryShell>

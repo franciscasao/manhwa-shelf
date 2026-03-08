@@ -44,6 +44,13 @@ function LibraryPageInner() {
   });
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
+  // Scroll to top on mount if no filters are active
+  useEffect(() => {
+    if (activeFilter === "all" && !searchQuery && sortBy === "title" && currentPage === 1) {
+      window.scrollTo({ top: 0 });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sync state → URL
   useEffect(() => {
     const params = new URLSearchParams();
