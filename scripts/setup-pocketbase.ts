@@ -68,6 +68,7 @@ async function main() {
       name: "readingHistory",
       type: "base",
       fields: [
+        { name: "userId", type: "text", required: true },
         { name: "mangaId", type: "text", required: true },
         { name: "chapterNum", type: "number", required: true },
         { name: "pageIndex", type: "number" },
@@ -78,8 +79,8 @@ async function main() {
         { name: "updated", type: "autodate", onCreate: true, onUpdate: true },
       ],
       indexes: [
-        "CREATE UNIQUE INDEX idx_readingHistory_manga_chapter ON readingHistory (mangaId, chapterNum)",
-        "CREATE INDEX idx_readingHistory_mangaId ON readingHistory (mangaId)",
+        "CREATE UNIQUE INDEX idx_readingHistory_user_manga_chapter ON readingHistory (userId, mangaId, chapterNum)",
+        "CREATE INDEX idx_readingHistory_userId ON readingHistory (userId)",
       ],
       listRule: "@request.auth.id != '' && @request.auth.verified = true",
       viewRule: "@request.auth.id != '' && @request.auth.verified = true",

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useContinueReading } from "@/hooks/use-reading-history";
+import { useAuth } from "@/hooks/use-auth";
 
 function formatTimeAgo(updatedAt: string): string {
   const diff = Date.now() - new Date(updatedAt).getTime();
@@ -15,7 +16,11 @@ function formatTimeAgo(updatedAt: string): string {
 }
 
 export function ContinueReadingSection() {
+  const { user } = useAuth();
   const { items, isLoading } = useContinueReading(8);
+
+  // Don't render for unauthenticated users
+  if (!user) return null;
 
   // Don't render the section at all if there's nothing to show (and not loading)
   if (!isLoading && items.length === 0) return null;

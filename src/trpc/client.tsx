@@ -7,6 +7,7 @@ import { createTRPCContext } from "@trpc/tanstack-react-query";
 import { useState } from "react";
 import { makeQueryClient } from "@/trpc/query-client";
 import type { AppRouter } from "@/trpc/routers/_app";
+import { pb } from "@/lib/db";
 
 export const { TRPCProvider, useTRPC, useTRPCClient } =
   createTRPCContext<AppRouter>();
@@ -36,7 +37,13 @@ export function TRPCReactProvider({ children }: { children: React.ReactNode }) {
         splitLink({
           condition: (op) => op.type === "subscription",
           true: httpSubscriptionLink({ url: getUrl() }),
-          false: httpBatchLink({ url: getUrl() }),
+          false: httpBatchLink({
+            url: getUrl(),
+            headers: () => {
+              const token = pb.authStore.token;
+              return token ? { Authorization: `Bearer ${token}` } : {};
+            },
+          }),
         }),
       ],
     }),
