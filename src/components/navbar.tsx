@@ -4,7 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 const publicLinks = [{ href: "/", label: "HOME" }];
 
@@ -17,18 +25,21 @@ export function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  // Don't show nav on login page
+  // Don't show nav on login page or reader pages
   if (pathname === "/login") return null;
+  if (/^\/manhwa\/\d+\/read\/\d+/.test(pathname)) return null;
 
   const links = user ? [...publicLinks, ...authLinks] : publicLinks;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-terminal-border bg-terminal-bg font-mono">
+    <header className="sticky top-0 z-50 w-full border-b border-terminal-border bg-terminal-bg font-mono pt-[env(safe-area-inset-top)]">
       <div className="container mx-auto flex h-14 items-center px-4">
         <Link href="/" className="mr-8 text-terminal-green font-bold text-lg">
           &gt; manhwa-shelf
         </Link>
-        <nav className="flex gap-6 overflow-x-auto">
+
+        {/* Desktop nav */}
+        <nav className="hidden sm:flex gap-6 overflow-x-auto">
           {links.map((link) => (
             <Link
               key={link.href}
@@ -45,10 +56,11 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        {/* Desktop auth controls */}
+        <div className="ml-auto hidden sm:flex items-center gap-3">
           {user ? (
             <>
-              <span className="text-xs text-terminal-dim hidden sm:inline">
+              <span className="text-xs text-terminal-dim">
                 <span className="text-terminal-muted">user:</span>{" "}
                 <span className="text-terminal-cyan">{user.email}</span>
               </span>
@@ -58,7 +70,7 @@ export function Navbar() {
                 title="Logout"
               >
                 <LogOut className="h-3 w-3" />
-                <span className="hidden sm:inline">LOGOUT</span>
+                <span>LOGOUT</span>
               </button>
             </>
           ) : (
@@ -69,6 +81,70 @@ export function Navbar() {
               [ LOGIN ]
             </Link>
           )}
+        </div>
+
+        {/* Mobile burger menu */}
+        <div className="ml-auto sm:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="border border-terminal-border p-2 text-terminal-dim hover:text-terminal-green hover:border-terminal-green/50 transition-colors"
+                aria-label="Open menu"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="min-w-[180px] border-terminal-border bg-terminal-bg font-mono"
+            >
+              {user && (
+                <>
+                  <DropdownMenuLabel className="text-xs text-terminal-muted font-normal">
+                    user: <span className="text-terminal-cyan">{user.email}</span>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-terminal-border" />
+                </>
+              )}
+              {links.map((link) => (
+                <DropdownMenuItem key={link.href} asChild>
+                  <Link
+                    href={link.href}
+                    className={cn(
+                      "text-sm font-medium transition-colors cursor-pointer",
+                      pathname === link.href
+                        ? "text-terminal-cyan"
+                        : "text-terminal-dim hover:text-terminal-green"
+                    )}
+                  >
+                    {link.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+              {user && (
+                <>
+                  <DropdownMenuSeparator className="bg-terminal-border" />
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className="text-sm font-medium text-terminal-dim hover:text-terminal-orange cursor-pointer"
+                  >
+                    <LogOut className="h-3 w-3 mr-2" />
+                    LOGOUT
+                  </DropdownMenuItem>
+                </>
+              )}
+              {!user && (
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="/login"
+                    className="text-sm text-terminal-cyan cursor-pointer"
+                  >
+                    [ LOGIN ]
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

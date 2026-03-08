@@ -14,6 +14,8 @@ interface MangaTerminalCardProps {
   titleClass?: string;
   /** Apply grayscale on image for "ghost" items (default: true, based on status) */
   showGhost?: boolean;
+  /** Show simplified card with only title, author, and chapters downloaded */
+  minimal?: boolean;
   /** Slot for the bottom action button */
   action: React.ReactNode;
 }
@@ -24,6 +26,7 @@ export function MangaTerminalCard({
   accentColor,
   titleClass,
   showGhost = true,
+  minimal = false,
   action,
 }: MangaTerminalCardProps) {
   const status = getDownloadStatus(manga);
@@ -39,9 +42,7 @@ export function MangaTerminalCard({
       style={{ animationDelay: `${index * 40}ms` }}
     >
       {/* Left accent strip */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-[2px] ${accentColor ?? `bg-${config.color}`}`}
-      />
+      <div className={`absolute left-0 top-0 bottom-0 w-[2px] ${accentColor ?? `bg-${config.color}`}`} />
 
       <Link href={`/manhwa/${manga.id}`} className="flex flex-col flex-1">
         {/* Cover image */}
@@ -52,9 +53,7 @@ export function MangaTerminalCard({
             fill
             sizes="(max-width: 768px) 50vw, 200px"
             className={`object-cover contrast-[1.15] saturate-[0.65] ${
-              isGhost
-                ? "opacity-30 grayscale"
-                : "opacity-85 group-hover:opacity-95"
+              isGhost ? "opacity-30 grayscale" : "opacity-85 group-hover:opacity-95"
             } transition-opacity`}
           />
           {/* Scanline overlay */}
@@ -67,7 +66,7 @@ export function MangaTerminalCard({
             }}
           />
           {/* Rating badge */}
-          {manga.rating > 0 && (
+          {!minimal && manga.rating > 0 && (
             <div className="absolute top-1 right-1 bg-terminal-bg/80 px-1.5 py-0.5 text-[0.6rem] font-mono text-terminal-orange">
               ★ {manga.rating}
             </div>
@@ -78,29 +77,29 @@ export function MangaTerminalCard({
         <div className="flex flex-col gap-1 px-2 py-2 text-xs">
           <div className="flex items-start gap-1">
             <span className="text-terminal-dim shrink-0">{">"}</span>
-            <span
-              className={`${titleClass ?? config.textClass} line-clamp-1 font-medium leading-tight`}
-            >
+            <span className={`${titleClass ?? config.textClass} line-clamp-1 font-medium leading-tight`}>
               {manga.title}
             </span>
           </div>
-          <div className="text-terminal-dim text-[0.6rem] line-clamp-1 pl-3">
-            {manga.author}
-          </div>
+          <div className="text-terminal-dim text-[0.6rem] line-clamp-1 pl-3">{manga.author}</div>
 
-          <div className="mt-1">
-            <ProgressDisplay manga={manga} />
-          </div>
+          {minimal ? (
+            <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3 mt-1">
+              {manga.chapters.downloaded} ch downloaded
+            </div>
+          ) : (
+            <>
+              <div className="mt-1">
+                <ProgressDisplay manga={manga} />
+              </div>
 
-          <div className="flex items-center gap-2">
-            <StatusBadge status={status} />
-            <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">
-              {chaptersStr} ch
-            </span>
-          </div>
-          <div className="text-[0.6rem] text-terminal-dim tabular-nums pl-3">
-            {manga.sizeOnDisk}
-          </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge status={status} />
+                <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">{chaptersStr} ch</span>
+              </div>
+              <div className="text-[0.6rem] text-terminal-dim tabular-nums pt-2">{manga.sizeOnDisk}</div>
+            </>
+          )}
         </div>
       </Link>
 

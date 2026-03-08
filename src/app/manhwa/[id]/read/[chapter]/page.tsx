@@ -116,7 +116,7 @@ export default function ChapterReaderPage() {
     <div className="font-mono min-h-screen bg-terminal-bg text-terminal-green">
       {/* Loading state */}
       {isLoading && (
-        <div className="relative z-10 mx-auto max-w-[900px] px-3 py-10">
+        <div className="relative z-10 mx-auto max-w-[900px] px-3 py-10 pt-[max(2.5rem,env(safe-area-inset-top))]">
           <div className="text-xs font-mono space-y-1">
             {bootLines.current.map((line, i) => (
               <div
@@ -139,7 +139,7 @@ export default function ChapterReaderPage() {
 
       {/* Error state */}
       {error && !isLoading && (
-        <div className="relative z-10 mx-auto max-w-[900px] px-3 py-10">
+        <div className="relative z-10 mx-auto max-w-[900px] px-3 py-10 pt-[max(2.5rem,env(safe-area-inset-top))]">
           <div className="border border-terminal-orange/40 bg-terminal-orange/[0.03] px-3 py-3 text-xs font-mono space-y-0.5">
             <div className="text-terminal-orange">{">"} READER ERROR</div>
             <div className="text-terminal-orange/70">{">"} ERR: {error}</div>
@@ -178,7 +178,7 @@ export default function ChapterReaderPage() {
               resumePageIndex={resumePageIndex}
             />
 
-            <div className="mx-auto max-w-[800px] mt-4 mb-8 px-3">
+            <div className="mx-auto max-w-[800px] mt-4 mb-8 px-3 pb-[env(safe-area-inset-bottom)]">
               <ReaderBottomNav
                 anilistId={anilistId}
                 chapterNum={chapter.chapterNum}
