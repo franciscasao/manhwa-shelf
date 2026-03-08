@@ -4,6 +4,10 @@ import { useEffect, useRef, useCallback, useState } from "react";
 
 const PRELOAD_AHEAD = 5;
 const MAX_RETRIES = 3;
+// Known image dimensions for manhwa pages — used for placeholder sizing
+const EXPECTED_ASPECT_RATIO = "2 / 3"; // 800x1200
+// Start loading images one full page height before they enter the viewport
+const OBSERVER_ROOT_MARGIN = "1200px 0px";
 
 type ImageState = "pending" | "loading" | "loaded" | "error";
 
@@ -140,7 +144,7 @@ export function ReaderImageStrip({
         const pageIndex = maxVisibleRef.current;
         onProgressChange(((pageIndex + 1) / imageUrls.length) * 100, pageIndex);
       },
-      { threshold: 0.1 },
+      { threshold: 0.1, rootMargin: OBSERVER_ROOT_MARGIN },
     );
 
     for (const ref of refs) observer.observe(ref);
@@ -172,9 +176,12 @@ export function ReaderImageStrip({
               className="relative w-full"
               style={aspectStyle}
             >
-              {/* Placeholder while loading */}
+              {/* Placeholder while loading — uses expected aspect ratio to prevent layout shift */}
               {!isLoaded && !isError && (
-                <div className="flex items-center justify-center h-[300px] border border-terminal-border/20 bg-terminal-bg">
+                <div
+                  className="flex items-center justify-center border border-terminal-border/20 bg-terminal-bg w-full"
+                  style={{ aspectRatio: EXPECTED_ASPECT_RATIO }}
+                >
                   <span className="text-[0.6rem] text-terminal-dim">
                     {">"} loading image {String(i + 1).padStart(3, "0")}
                     <span className="blink-cursor">_</span>
@@ -184,7 +191,10 @@ export function ReaderImageStrip({
 
               {/* Error state with retry */}
               {isError && (
-                <div className="flex flex-col items-center justify-center h-[200px] border border-terminal-orange/30 bg-terminal-orange/[0.03]">
+                <div
+                  className="flex flex-col items-center justify-center border border-terminal-orange/30 bg-terminal-orange/[0.03] w-full"
+                  style={{ aspectRatio: EXPECTED_ASPECT_RATIO }}
+                >
                   <span className="text-[0.6rem] text-terminal-orange">
                     {">"} ERR: failed to load image{" "}
                     {String(i + 1).padStart(3, "0")}
