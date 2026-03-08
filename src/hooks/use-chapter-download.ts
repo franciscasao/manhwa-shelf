@@ -75,7 +75,7 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
     let cancelled = false;
 
     pb.collection("chapterDownloads")
-      .getFullList({ filter: `mangaId = "${mangaId}"` })
+      .getFullList({ filter: `mangaId = "${mangaId}"`, fields: "chapterNum" })
       .then((records) => {
         if (!cancelled) {
           setDownloadRecords(
