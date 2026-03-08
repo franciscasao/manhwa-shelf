@@ -74,6 +74,8 @@ async function main() {
         { name: "totalPages", type: "number" },
         { name: "mangaTitle", type: "text" },
         { name: "coverImage", type: "text" },
+        { name: "created", type: "autodate", onCreate: true, onUpdate: false },
+        { name: "updated", type: "autodate", onCreate: true, onUpdate: true },
       ],
       indexes: [
         "CREATE UNIQUE INDEX idx_readingHistory_manga_chapter ON readingHistory (mangaId, chapterNum)",

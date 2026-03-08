@@ -24,9 +24,7 @@ export function ContinueReadingSection() {
     <section className="mb-8">
       <div className="text-[0.6rem] text-terminal-muted tracking-widest mb-3 border-b border-terminal-border pb-2">
         --- CONTINUE READING ---
-        {!isLoading && items.length > 0 && (
-          <span> {items.length} in progress</span>
-        )}
+        {!isLoading && items.length > 0 && <span> {items.length} in progress</span>}
       </div>
 
       {isLoading && (
@@ -55,9 +53,7 @@ export function ContinueReadingSection() {
             const anilistId = parseInt(item.mangaId, 10);
             const readUrl = `/manhwa/${anilistId}/read/${item.chapterNum}`;
             const detailUrl = `/manhwa/${anilistId}`;
-            const pct = item.totalPages > 0
-              ? Math.round((item.pageIndex / Math.max(item.totalPages - 1, 1)) * 100)
-              : 0;
+            const pct = item.totalPages > 0 ? Math.round((item.pageIndex / Math.max(item.totalPages - 1, 1)) * 100) : 0;
             const isFinished = item.pageIndex >= item.totalPages - 1;
 
             return (
@@ -97,16 +93,11 @@ export function ContinueReadingSection() {
                     </div>
                   </Link>
 
-                  <div className="text-[0.5rem] text-terminal-dim font-mono">
-                    {formatTimeAgo(item.updatedAt)}
-                  </div>
+                  <div className="text-[0.5rem] text-terminal-dim font-mono">{formatTimeAgo(item.updatedAt)}</div>
 
                   {/* Progress bar */}
                   <div className="h-0.5 w-full bg-terminal-border/30">
-                    <div
-                      className="h-full bg-terminal-green transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
+                    <div className="h-full bg-terminal-green transition-all" style={{ width: `${pct}%` }} />
                   </div>
 
                   {/* Resume button */}

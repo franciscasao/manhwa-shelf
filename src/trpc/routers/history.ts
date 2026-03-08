@@ -51,9 +51,7 @@ export const historyRouter = createTRPCRouter({
       try {
         const record = await pb
           .collection("readingHistory")
-          .getFirstListItem(
-            `mangaId="${input.mangaId}" && chapterNum=${input.chapterNum}`,
-          );
+          .getFirstListItem(`mangaId="${input.mangaId}" && chapterNum=${input.chapterNum}`);
         return {
           pageIndex: record.pageIndex as number,
           totalPages: record.totalPages as number,
@@ -71,11 +69,16 @@ export const historyRouter = createTRPCRouter({
     .input(z.object({ limit: z.number().int().min(1).max(20).default(10) }))
     .query(async ({ ctx, input }) => {
       const { pb } = ctx;
-      // Get one record per manga — the most recently updated chapter
-      const records = await pb.collection("readingHistory").getList(1, input.limit, {
-        sort: "-updated",
-        fields: "id,mangaId,chapterNum,pageIndex,totalPages,mangaTitle,coverImage,updated",
-      });
+      let records;
+      try {
+        records = await pb.collection("readingHistory").getList(1, input.limit, {
+          sort: "-updated",
+          fields: "mangaId,chapterNum,pageIndex,totalPages,mangaTitle,coverImage,updated",
+        });
+      } catch (err) {
+        console.error("[history.getContinueReading] PocketBase error:", err);
+        return [];
+      }
 
       // Deduplicate by mangaId, keeping only the most recently updated per manga
       const seen = new Set<string>();

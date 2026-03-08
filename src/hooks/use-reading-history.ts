@@ -5,25 +5,22 @@ import { useTRPC } from "@/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 /** Returns a debounced save function that persists reading progress */
-export function useSaveReadingProgress(
-  mangaId: string,
-  chapterNum: number,
-  mangaTitle: string,
-  coverImage: string,
-) {
+export function useSaveReadingProgress(mangaId: string, chapterNum: number, mangaTitle: string, coverImage: string) {
   const trpc = useTRPC();
   const mutation = useMutation(trpc.history.saveProgress.mutationOptions());
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const mutateRef = useRef(mutation.mutate);
+  mutateRef.current = mutation.mutate;
 
   const save = useCallback(
     (pageIndex: number, totalPages: number) => {
       if (!mangaId || !chapterNum || totalPages === 0) return;
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        mutation.mutate({ mangaId, chapterNum, pageIndex, totalPages, mangaTitle, coverImage });
+        mutateRef.current({ mangaId, chapterNum, pageIndex, totalPages, mangaTitle, coverImage });
       }, 1000); // debounce: 1 second
     },
-    [mutation, mangaId, chapterNum, mangaTitle, coverImage],
+    [mangaId, chapterNum, mangaTitle, coverImage],
   );
 
   return save;
@@ -47,6 +44,7 @@ export function useContinueReading(limit = 10) {
     ...trpc.history.getContinueReading.queryOptions({ limit }),
     staleTime: 30_000,
   });
+  console.log("result: ", result);
   return {
     items: result.data ?? [],
     isLoading: result.isLoading,
