@@ -102,6 +102,7 @@ export function mapAniListToManga(media: AniListMedia, origin?: MangaOrigin): Ma
       total: media.chapters ?? null,
     },
     sizeOnDisk: "0 MB",
+    avgChapterSize: "",
     lastUpdated: "",
     origin: resolvedOrigin,
   };

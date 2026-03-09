@@ -35,6 +35,7 @@ async function main() {
         { name: "rating", type: "number" },
         { name: "chapters", type: "json" },
         { name: "sizeOnDisk", type: "text" },
+        { name: "avgChapterSize", type: "text" },
         { name: "lastUpdated", type: "text" },
         { name: "origin", type: "select", values: ["KR", "JP", "CN", "TW"] },
       ],

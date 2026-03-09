@@ -265,6 +265,12 @@ class DownloadManager extends EventEmitter {
               ? `${(totalBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
               : `${(totalBytes / (1024 * 1024)).toFixed(2)} MB`;
 
+          const avgBytes = totalChapters > 0 ? totalBytes / totalChapters : 0;
+          const formattedAvg =
+            avgBytes >= 1024 * 1024 * 1024
+              ? `${(avgBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+              : `${(avgBytes / (1024 * 1024)).toFixed(2)} MB`;
+
           const shelfRecord = await pb.collection("shelf").getOne(mangaId);
           const existingChapters = shelfRecord.chapters as {
             downloaded: number;
@@ -277,6 +283,7 @@ class DownloadManager extends EventEmitter {
               total: existingChapters?.total ?? null,
             },
             sizeOnDisk: formattedSize,
+            avgChapterSize: formattedAvg,
           });
         } catch {
           // Shelf entry may not exist

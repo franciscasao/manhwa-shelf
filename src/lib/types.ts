@@ -71,6 +71,7 @@ export type Manga = {
     total: number | null;
   };
   sizeOnDisk: string;
+  avgChapterSize: string;
   lastUpdated: string;
   origin: MangaOrigin;
 };
