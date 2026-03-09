@@ -10,8 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:setup": "tsx --env-file=.env scripts/setup-pocketbase.ts",
-    "db:migrate:avg-chapter-size": "tsx --env-file=.env scripts/migrate-avg-chapter-size.ts"
+    "db:setup": "tsx --env-file=.env scripts/setup-pocketbase.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
