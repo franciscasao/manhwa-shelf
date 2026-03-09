@@ -162,6 +162,13 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
     setServerState(null);
   }, [trpcClient, mangaId]);
 
+  const removeChapter = useCallback(
+    async (chapterNum: number) => {
+      await trpcClient.download.remove.mutate({ mangaId, chapterNum });
+    },
+    [trpcClient, mangaId],
+  );
+
   const { queue, currentProgress, isProcessing } = useMemo(() => snapshotToProgress(serverState), [serverState]);
 
   return {
@@ -172,6 +179,7 @@ export function useChapterDownload(mangaId: string, mangaTitle: string) {
     enqueueChapter,
     enqueueMany,
     cancelQueue,
+    removeChapter,
     isDownloading: isProcessing,
   };
 }

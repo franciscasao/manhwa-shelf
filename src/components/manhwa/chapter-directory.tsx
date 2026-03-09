@@ -204,6 +204,7 @@ function ChapterRow({
   currentProgress,
   anilistId,
   onDownload,
+  onRemove,
 }: {
   chapterNum: number;
   label: string;
@@ -212,6 +213,7 @@ function ChapterRow({
   currentProgress: ChapterProgress | null;
   anilistId?: number;
   onDownload?: () => void;
+  onRemove?: () => void;
 }) {
   const num = String(chapterNum).padStart(3, "0");
   const { colorClass, bar, perm, statusLabel } = getChapterStatus(
@@ -223,10 +225,10 @@ function ChapterRow({
   const isChapterDownloaded = downloadedChapters.has(chapterNum);
   const readHref = anilistId ? `/manhwa/${anilistId}/read/${chapterNum}` : null;
 
-  const row = (
+  return (
     <div
       className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${
-        isChapterDownloaded && readHref ? " hover:bg-terminal-row-hover cursor-pointer" : ""
+        isChapterDownloaded && readHref ? " hover:bg-terminal-row-hover" : ""
       }`}
     >
       <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
@@ -234,8 +236,22 @@ function ChapterRow({
       <span className="truncate flex-1 min-w-0">{label}</span>
       <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
       <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
-      {isChapterDownloaded && readHref ? (
-        <span className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">[ READ ]</span>
+      {isChapterDownloaded ? (
+        <span className="shrink-0 flex items-center gap-1">
+          {readHref && (
+            <Link href={readHref} className="text-terminal-cyan hover:text-terminal-green text-[0.6rem]">
+              [ READ ]
+            </Link>
+          )}
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className="text-red-400 hover:text-red-300 text-[0.6rem]"
+            >
+              [ RM ]
+            </button>
+          )}
+        </span>
       ) : onDownload ? (
         <button onClick={onDownload} className="shrink-0 text-terminal-cyan hover:text-terminal-green text-[0.6rem]">
           [ DL ]
@@ -243,15 +259,6 @@ function ChapterRow({
       ) : null}
     </div>
   );
-
-  if (isChapterDownloaded && readHref) {
-    return (
-      <Link href={readHref} className="block">
-        {row}
-      </Link>
-    );
-  }
-  return <div>{row}</div>;
 }
 
 function Pagination({
@@ -317,8 +324,10 @@ export function ChapterDirectory({
     enqueueChapter,
     enqueueMany,
     cancelQueue,
+    removeChapter,
     isDownloading,
   } = useChapterDownload(mangaId, mangaTitle);
+  const [removingChapter, setRemovingChapter] = useState<number | null>(null);
   const [page, setPage] = useState(0);
 
   // Read-only mode: show only downloaded chapters
@@ -392,6 +401,15 @@ export function ChapterDirectory({
       .map((ch, idx) => ({ ch, chapterNum: idx + 1 }))
       .filter(({ chapterNum }) => !downloadedChapters.has(chapterNum));
 
+    const handleRemove = async (chapterNum: number) => {
+      setRemovingChapter(chapterNum);
+      try {
+        await removeChapter(chapterNum);
+      } finally {
+        setRemovingChapter(null);
+      }
+    };
+
     const handleDownloadBatch = (count?: number) => {
       if (!sourceId) return;
       const batch = count != null ? undownloaded.slice(0, count) : undownloaded;
@@ -433,6 +451,7 @@ export function ChapterDirectory({
           {slice.map((ch, idx) => {
             const chapterNum = start + idx + 1;
             const canDl = sourceId && !isDownloading && !isLoadingDownloads && !downloadedChapters.has(chapterNum);
+            const isRemoving = removingChapter === chapterNum;
             return (
               <ChapterRow
                 key={chapterNum}
@@ -449,6 +468,11 @@ export function ChapterDirectory({
                           chapterUrl: ch.url,
                           sourceId: sourceId!,
                         })
+                    : undefined
+                }
+                onRemove={
+                  downloadedChapters.has(chapterNum) && !isRemoving
+                    ? () => handleRemove(chapterNum)
                     : undefined
                 }
               />
