@@ -2,6 +2,7 @@
 
 import { HeroSection } from "@/components/homepage/hero-section";
 import { ContinueReadingSection } from "@/components/homepage/continue-reading-section";
+import { NextUpSection } from "@/components/homepage/next-up-section";
 import { CatalogGrid } from "@/components/homepage/catalog-grid";
 
 export default function HomePage() {
@@ -20,6 +21,7 @@ export default function HomePage() {
       <div className="relative z-10 mx-auto max-w-[1200px] animate-[flicker_4s_infinite] px-3 py-6 md:px-8 md:py-10">
         <HeroSection />
         <ContinueReadingSection />
+        <NextUpSection />
         <CatalogGrid />
       </div>
     </div>

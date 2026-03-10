@@ -29,6 +29,7 @@ export function useSaveReadingProgress(mangaId: string, chapterNum: number, mang
                 // Invalidate completed chapters cache so directory updates
                 queryClient.invalidateQueries({ queryKey: trpc.history.getCompletedChapters.queryKey() });
                 queryClient.invalidateQueries({ queryKey: trpc.history.getContinueReading.queryKey() });
+                queryClient.invalidateQueries({ queryKey: trpc.history.getNextUp.queryKey() });
               }
             },
           },
@@ -74,6 +75,21 @@ export function useContinueReading(limit = 10) {
   const trpc = useTRPC();
   const result = useQuery({
     ...trpc.history.getContinueReading.queryOptions({ limit }),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+  return {
+    items: result.data ?? [],
+    isLoading: result.isLoading,
+  };
+}
+
+/** Fetches the next-up list (next unread chapter per manga) for the home page */
+export function useNextUp(limit = 10) {
+  const { user } = useAuth();
+  const trpc = useTRPC();
+  const result = useQuery({
+    ...trpc.history.getNextUp.queryOptions({ limit }),
     enabled: !!user,
     staleTime: 30_000,
   });
