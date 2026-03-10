@@ -74,35 +74,25 @@ function getChapterStatus(
     }
   }
 
-  // Check if downloaded this session
-  if (sessionDownloaded?.has(index)) {
+  // Check if downloaded (this session or previously)
+  if (sessionDownloaded?.has(index) || index <= downloaded) {
     return {
-      status: "DONE" as const,
+      status: "IDLE" as const,
       colorClass: "text-terminal-green",
       bar: "",
       perm: "drwxr-xr-x",
-      statusLabel: "DONE",
+      statusLabel: "",
     };
   }
 
-  let status: "DONE" | "SYNC" | "WAIT";
-  let colorClass: string;
-  let bar: string;
-  let perm: string;
-
-  if (index <= downloaded) {
-    status = "DONE";
-    colorClass = "text-terminal-green";
-    bar = "";
-    perm = "drwxr-xr-x";
-  } else {
-    status = "WAIT";
-    colorClass = "text-terminal-dim";
-    bar = "";
-    perm = "-rw-r--r--";
-  }
-
-  return { status, colorClass, bar, perm, statusLabel: status };
+  // Not downloaded
+  return {
+    status: "IDLE" as const,
+    colorClass: "text-terminal-dim",
+    bar: "",
+    perm: "-rw-r--r--",
+    statusLabel: "",
+  };
 }
 
 function DirectoryShell({
