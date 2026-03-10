@@ -30,7 +30,7 @@ export default function ChapterReaderPage() {
   // Reading history: saved page to resume from
   const savedProgress = useReadingProgress(mangaId, chapterNum);
   const resumePageIndex = savedProgress?.pageIndex ?? 0;
-  const saveProgress = useSaveReadingProgress(mangaId, chapterNum, mangaTitle, coverImage);
+  const { save: saveProgress } = useSaveReadingProgress(mangaId, chapterNum, mangaTitle, coverImage);
 
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -189,6 +189,7 @@ export default function ChapterReaderPage() {
           </div>
         </>
       )}
+
     </div>
   );
 }

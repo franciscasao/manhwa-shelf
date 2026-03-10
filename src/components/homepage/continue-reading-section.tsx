@@ -59,7 +59,7 @@ export function ContinueReadingSection() {
             const readUrl = `/manhwa/${anilistId}/read/${item.chapterNum}`;
             const detailUrl = `/manhwa/${anilistId}`;
             const pct = item.totalPages > 0 ? Math.round((item.pageIndex / Math.max(item.totalPages - 1, 1)) * 100) : 0;
-            const isFinished = item.pageIndex >= item.totalPages - 1;
+            const isFinished = item.completed || item.pageIndex >= item.totalPages - 1;
 
             return (
               <div
@@ -79,6 +79,12 @@ export function ContinueReadingSection() {
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-terminal-border/10">
                       <span className="text-[0.5rem] text-terminal-dim">NO IMAGE</span>
+                    </div>
+                  )}
+                  {/* Completed badge */}
+                  {isFinished && (
+                    <div className="absolute top-0 right-0 px-1 py-0.5 bg-terminal-cyan/90 text-terminal-bg text-[0.45rem] font-mono font-bold tracking-wider">
+                      DONE
                     </div>
                   )}
                   {/* Chapter badge */}
@@ -102,7 +108,10 @@ export function ContinueReadingSection() {
 
                   {/* Progress bar */}
                   <div className="h-0.5 w-full bg-terminal-border/30">
-                    <div className="h-full bg-terminal-green transition-all" style={{ width: `${pct}%` }} />
+                    <div
+                      className={`h-full transition-all ${isFinished ? "bg-terminal-cyan" : "bg-terminal-green"}`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
 
                   {/* Resume button */}

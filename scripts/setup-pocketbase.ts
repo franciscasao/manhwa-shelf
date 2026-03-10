@@ -75,6 +75,8 @@ async function main() {
         { name: "totalPages", type: "number" },
         { name: "mangaTitle", type: "text" },
         { name: "coverImage", type: "text" },
+        { name: "completed", type: "bool" },
+        { name: "completedAt", type: "text" },
         { name: "created", type: "autodate", onCreate: true, onUpdate: false },
         { name: "updated", type: "autodate", onCreate: true, onUpdate: true },
       ],
