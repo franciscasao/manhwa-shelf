@@ -118,7 +118,7 @@ export const historyRouter = createTRPCRouter({
       try {
         records = await pb.collection("readingHistory").getList(1, input.limit, {
           sort: "-updated",
-          filter: `userId="${userId}"`,
+          filter: `userId="${userId}" && completed=false`,
           fields: "mangaId,chapterNum,pageIndex,totalPages,mangaTitle,coverImage,completed,updated",
         });
       } catch (err) {
@@ -144,5 +144,73 @@ export const historyRouter = createTRPCRouter({
         completed: (r.completed as boolean) ?? false,
         updatedAt: r.updated as string,
       }));
+    }),
+
+  /** Get next unread chapter per manga for the "Next Up" section */
+  getNextUp: authedProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(20).default(10) }))
+    .query(async ({ ctx, input }) => {
+      const { pb, userId } = ctx;
+      let records;
+      try {
+        // Fetch all completed reading history for this user, sorted by most recent
+        records = await pb.collection("readingHistory").getFullList({
+          sort: "-updated",
+          filter: `userId="${userId}" && completed=true`,
+          fields: "mangaId,chapterNum,mangaTitle,coverImage,updated",
+        });
+      } catch (err) {
+        console.error("[history.getNextUp] PocketBase error:", err);
+        return [];
+      }
+
+      // Also fetch ongoing (incomplete) chapters to exclude those manga
+      let ongoingRecords: { mangaId: unknown }[];
+      try {
+        ongoingRecords = await pb.collection("readingHistory").getFullList({
+          filter: `userId="${userId}" && completed=false`,
+          fields: "mangaId",
+        });
+      } catch {
+        ongoingRecords = [];
+      }
+      const ongoingMangaIds = new Set(ongoingRecords.map((r) => r.mangaId as string));
+
+      // Group by mangaId and find the highest completed chapter per manga
+      const mangaMap = new Map<
+        string,
+        { maxChapter: number; mangaTitle: string; coverImage: string; updatedAt: string }
+      >();
+      for (const r of records) {
+        const mid = r.mangaId as string;
+        // Skip manga that have an ongoing chapter
+        if (ongoingMangaIds.has(mid)) continue;
+        const chNum = r.chapterNum as number;
+        const existing = mangaMap.get(mid);
+        if (!existing || chNum > existing.maxChapter) {
+          mangaMap.set(mid, {
+            maxChapter: chNum,
+            mangaTitle: r.mangaTitle as string,
+            coverImage: r.coverImage as string,
+            updatedAt: existing?.updatedAt ?? (r.updated as string),
+          });
+        } else if (!existing.updatedAt) {
+          existing.updatedAt = r.updated as string;
+        }
+      }
+
+      // Build next-up list: next chapter = maxCompleted + 1
+      const items = Array.from(mangaMap.entries())
+        .map(([mangaId, info]) => ({
+          mangaId,
+          nextChapterNum: info.maxChapter + 1,
+          lastCompletedChapter: info.maxChapter,
+          mangaTitle: info.mangaTitle,
+          coverImage: info.coverImage,
+          updatedAt: info.updatedAt,
+        }))
+        .slice(0, input.limit);
+
+      return items;
     }),
 });
