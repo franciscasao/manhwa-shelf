@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useShelf } from "@/hooks/use-shelf";
 import { useMediaDetail } from "@/hooks/use-media-detail";
 import { useSourceChapters } from "@/hooks/use-source-chapters";
+import { useCompletedChapters } from "@/hooks/use-reading-history";
 import { ArrowLeft } from "lucide-react";
 import { ManhwaHeader } from "@/components/manhwa/manhwa-header";
 import { ManhwaMetadata } from "@/components/manhwa/manhwa-metadata";
@@ -47,6 +48,10 @@ export default function ManhwaDetailPage() {
     isLoading: isLoadingChapters,
     error: sourceError,
   } = useSourceChapters(isAuthenticated ? activeSource : null);
+
+  // Fetch completed chapters for authenticated users
+  const mangaIdForCompletion = toPocketBaseId(id);
+  const { completedChapters } = useCompletedChapters(mangaIdForCompletion);
 
   // Fetch downloaded chapters for read-only (public) view
   const mangaIdForQuery = toPocketBaseId(id);
@@ -178,6 +183,7 @@ export default function ManhwaDetailPage() {
                 sourceError={sourceError}
                 readOnly={!isAuthenticated}
                 downloadedChaptersList={downloadedChaptersList}
+                completedChapters={completedChapters}
               />
             </div>
 

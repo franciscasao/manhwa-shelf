@@ -21,6 +21,7 @@ interface ChapterDirectoryProps {
   sourceError?: string | null;
   readOnly?: boolean;
   downloadedChaptersList?: { chapterNum: number; title: string }[];
+  completedChapters?: Set<number>;
 }
 
 const PER_PAGE = 50;
@@ -107,12 +108,14 @@ function getChapterStatus(
 function DirectoryShell({
   entryCount,
   cached,
+  readCount,
   onRefresh,
   isRefreshing,
   children,
 }: {
   entryCount?: number;
   cached?: number;
+  readCount?: number;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   children: React.ReactNode;
@@ -124,6 +127,7 @@ function DirectoryShell({
           --- CHAPTER DIRECTORY ---
           {entryCount != null && <> {entryCount} entries</>}
           {cached != null && cached > 0 && <span> — {cached} cached</span>}
+          {readCount != null && readCount > 0 && <span className="text-terminal-cyan"> — {readCount} read</span>}
         </span>
         {onRefresh && (
           <button
@@ -201,6 +205,7 @@ function ChapterRow({
   label,
   downloaded,
   downloadedChapters,
+  completedChapters,
   currentProgress,
   anilistId,
   onDownload,
@@ -210,6 +215,7 @@ function ChapterRow({
   label: string;
   downloaded: number;
   downloadedChapters: Set<number>;
+  completedChapters?: Set<number>;
   currentProgress: ChapterProgress | null;
   anilistId?: number;
   onDownload?: () => void;
@@ -223,6 +229,7 @@ function ChapterRow({
     currentProgress,
   );
   const isChapterDownloaded = downloadedChapters.has(chapterNum);
+  const isChapterCompleted = completedChapters?.has(chapterNum) ?? false;
   const readHref = anilistId ? `/manhwa/${anilistId}/read/${chapterNum}` : null;
 
   return (
@@ -234,6 +241,9 @@ function ChapterRow({
       <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
       <span className="w-[30px] shrink-0">{num}</span>
       <span className="truncate flex-1 min-w-0">{label}</span>
+      {isChapterCompleted && (
+        <span className="shrink-0 text-terminal-cyan text-[0.55rem]" title="Chapter read">&#x2713;</span>
+      )}
       <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
       <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
       {isChapterDownloaded ? (
@@ -315,6 +325,7 @@ export function ChapterDirectory({
   sourceError,
   readOnly,
   downloadedChaptersList,
+  completedChapters,
 }: ChapterDirectoryProps) {
   const {
     queue,
@@ -355,6 +366,7 @@ export function ChapterDirectory({
               label={ch.title}
               downloaded={0}
               downloadedChapters={readOnlyDownloaded}
+              completedChapters={completedChapters}
               currentProgress={null}
               anilistId={anilistId}
             />
@@ -371,6 +383,7 @@ export function ChapterDirectory({
     downloaded,
     isOnShelf,
     downloadedChapters,
+    completedChapters,
     currentProgress,
     anilistId,
   };
@@ -427,6 +440,7 @@ export function ChapterDirectory({
       <DirectoryShell
         entryCount={totalEpisodes}
         cached={isOnShelf && downloaded > 0 ? downloaded : undefined}
+        readCount={completedChapters?.size}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
       >
@@ -516,7 +530,7 @@ export function ChapterDirectory({
   const end = Math.min((page + 1) * PER_PAGE, effectiveTotal);
 
   return (
-    <DirectoryShell entryCount={effectiveTotal} cached={isOnShelf && downloaded > 0 ? downloaded : undefined}>
+    <DirectoryShell entryCount={effectiveTotal} cached={isOnShelf && downloaded > 0 ? downloaded : undefined} readCount={completedChapters?.size}>
       <div className="space-y-0">
         {Array.from({ length: end - start + 1 }, (_, i) => {
           const chapterNum = start + i;
