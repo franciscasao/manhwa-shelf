@@ -15,6 +15,9 @@ export interface ChapterReaderData {
   nextChapter: number | null;
 }
 
+const PB_URL =
+  process.env.NEXT_PUBLIC_POCKETBASE_URL ?? "http://127.0.0.1:8090";
+
 function buildImageUrls(data: {
   recordId: string;
   collectionId: string;
@@ -22,7 +25,7 @@ function buildImageUrls(data: {
 }): string[] {
   return data.images.map(
     (filename) =>
-      `/api/chapter/image?c=${data.collectionId}&r=${data.recordId}&f=${filename}`,
+      `${PB_URL}/api/files/${data.collectionId}/${data.recordId}/${filename}`,
   );
 }
 

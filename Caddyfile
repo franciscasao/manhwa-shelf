@@ -1,0 +1,36 @@
+# Caddy reverse proxy — serves both Next.js and PocketBase over HTTP/2.
+#
+# Replace "manhwa.example.com" with your actual domain.
+# Caddy auto-provisions HTTPS via Let's Encrypt, which enables HTTP/2.
+#
+# Usage:
+#   caddy run          (foreground)
+#   caddy start        (background)
+#
+# For local development (HTTP/2 over localhost with self-signed cert):
+#   caddy run --config Caddyfile
+
+manhwa.example.com {
+	# PocketBase file API — direct access, long cache
+	handle /api/files/* {
+		reverse_proxy 127.0.0.1:8090
+		header Cache-Control "public, max-age=31536000, immutable"
+	}
+
+	# PocketBase admin & data API
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8090
+	}
+
+	# PocketBase realtime (SSE)
+	handle /api/realtime {
+		reverse_proxy 127.0.0.1:8090 {
+			flush_interval -1
+		}
+	}
+
+	# Everything else → Next.js
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}
