@@ -1,0 +1,10 @@
+.git
+.gitignore
+.next
+node_modules
+README.md
+CLAUDE.md
+tasks/
+pocketbase/
+.env*
+*.log
