@@ -179,12 +179,14 @@ export function ReaderImageStrip({
               {/* Placeholder while loading — uses expected aspect ratio to prevent layout shift */}
               {!isLoaded && !isError && (
                 <div
-                  className="flex items-center justify-center border border-terminal-border/20 bg-terminal-bg w-full"
+                  className="flex flex-col items-center justify-center gap-3 border border-terminal-border/20 bg-terminal-bg w-full"
                   style={{ aspectRatio: EXPECTED_ASPECT_RATIO }}
                 >
+                  {/* Animated loading bar */}
+                  <div className="w-24 h-px text-terminal-green/40 loading-bar-track rounded" />
                   <span className="text-[0.6rem] text-terminal-dim">
                     {">"} loading image {String(i + 1).padStart(3, "0")}
-                    <span className="blink-cursor">_</span>
+                    <span className="loading-dots" />
                   </span>
                 </div>
               )}
