@@ -6,8 +6,10 @@ const PRELOAD_AHEAD = 5;
 const MAX_RETRIES = 3;
 // Known image dimensions for manhwa pages — used for placeholder sizing
 const EXPECTED_ASPECT_RATIO = "2 / 3"; // 800x1200
-// Start loading images one full page height before they enter the viewport
-const OBSERVER_ROOT_MARGIN = "1200px 0px";
+// Start loading images ~5 pages before they enter the viewport.
+// Each placeholder is ~1200px tall (800px × 2/3 aspect ratio), so we need
+// a margin large enough to cover PRELOAD_AHEAD pages worth of placeholders.
+const OBSERVER_ROOT_MARGIN = "6000px 0px";
 
 type ImageState = "pending" | "loading" | "loaded" | "error";
 
@@ -231,7 +233,7 @@ export function ReaderImageStrip({
                       : url
                   }
                   alt={`Page ${i + 1}`}
-                  loading={i >= resumePageIndex && i <= resumePageIndex + PRELOAD_AHEAD ? "eager" : "lazy"}
+                  loading="eager"
                   className={`w-full block reader-image ${isLoaded ? "" : "h-0 overflow-hidden"}`}
                   onLoad={(e) =>
                     handleImageLoad(i, e.target as HTMLImageElement)
