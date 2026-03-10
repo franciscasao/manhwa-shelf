@@ -232,20 +232,21 @@ function ChapterRow({
   const isChapterCompleted = completedChapters?.has(chapterNum) ?? false;
   const readHref = anilistId ? `/manhwa/${anilistId}/read/${chapterNum}` : null;
 
+  // Override color and status for completed chapters
+  const effectiveColorClass = isChapterCompleted ? "text-terminal-cyan" : colorClass;
+  const effectiveStatusLabel = isChapterCompleted ? "READ" : statusLabel;
+
   return (
     <div
-      className={`${colorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${
+      className={`${effectiveColorClass} flex items-center gap-2 text-[0.65rem] leading-relaxed${
         isChapterDownloaded && readHref ? " hover:bg-terminal-row-hover" : ""
-      }`}
+      }${isChapterCompleted ? " border-l-2 border-terminal-cyan/50 pl-1" : ""}`}
     >
       <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
       <span className="w-[30px] shrink-0">{num}</span>
       <span className="truncate flex-1 min-w-0">{label}</span>
-      {isChapterCompleted && (
-        <span className="shrink-0 text-terminal-cyan text-[0.55rem]" title="Chapter read">&#x2713;</span>
-      )}
       <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
-      <span className="shrink-0 w-[36px] text-right">{statusLabel}</span>
+      <span className={`shrink-0 w-[36px] text-right${isChapterCompleted ? " text-terminal-cyan" : ""}`}>{effectiveStatusLabel}</span>
       {isChapterDownloaded ? (
         <span className="shrink-0 flex items-center gap-1">
           {readHref && (

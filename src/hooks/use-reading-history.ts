@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useTRPC } from "@/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 
-/** Returns a debounced save function that persists reading progress.
- *  Also returns `justCompleted` — true once when the chapter is first finished. */
+/** Returns a debounced save function that persists reading progress. */
 export function useSaveReadingProgress(mangaId: string, chapterNum: number, mangaTitle: string, coverImage: string) {
   const { user } = useAuth();
   const trpc = useTRPC();
@@ -15,9 +14,6 @@ export function useSaveReadingProgress(mangaId: string, chapterNum: number, mang
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const mutateRef = useRef(mutation.mutate);
   useEffect(() => { mutateRef.current = mutation.mutate; });
-
-  const [justCompleted, setJustCompleted] = useState(false);
-  const completionFiredRef = useRef(false);
 
   const save = useCallback(
     (pageIndex: number, totalPages: number) => {
@@ -29,10 +25,8 @@ export function useSaveReadingProgress(mangaId: string, chapterNum: number, mang
           { mangaId, chapterNum, pageIndex, totalPages, mangaTitle, coverImage },
           {
             onSuccess: (data) => {
-              if (data.justCompleted && !completionFiredRef.current) {
-                completionFiredRef.current = true;
-                setJustCompleted(true);
-                // Invalidate completed chapters cache
+              if (data.justCompleted) {
+                // Invalidate completed chapters cache so directory updates
                 queryClient.invalidateQueries({ queryKey: trpc.history.getCompletedChapters.queryKey() });
                 queryClient.invalidateQueries({ queryKey: trpc.history.getContinueReading.queryKey() });
               }
@@ -44,9 +38,7 @@ export function useSaveReadingProgress(mangaId: string, chapterNum: number, mang
     [user, mangaId, chapterNum, mangaTitle, coverImage, queryClient, trpc],
   );
 
-  const dismissCompletion = useCallback(() => setJustCompleted(false), []);
-
-  return { save, justCompleted, dismissCompletion };
+  return { save };
 }
 
 /** Fetches the saved reading progress for a chapter */

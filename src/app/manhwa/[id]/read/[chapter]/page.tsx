@@ -9,7 +9,6 @@ import { useReadingProgress, useSaveReadingProgress } from "@/hooks/use-reading-
 import { ReaderToolbar } from "@/components/reader/reader-toolbar";
 import { ReaderImageStrip } from "@/components/reader/reader-image-strip";
 import { ReaderBottomNav } from "@/components/reader/reader-bottom-nav";
-import { ChapterCompleteToast } from "@/components/reader/chapter-complete-toast";
 
 export default function ChapterReaderPage() {
   const params = useParams();
@@ -31,7 +30,7 @@ export default function ChapterReaderPage() {
   // Reading history: saved page to resume from
   const savedProgress = useReadingProgress(mangaId, chapterNum);
   const resumePageIndex = savedProgress?.pageIndex ?? 0;
-  const { save: saveProgress, justCompleted, dismissCompletion } = useSaveReadingProgress(mangaId, chapterNum, mangaTitle, coverImage);
+  const { save: saveProgress } = useSaveReadingProgress(mangaId, chapterNum, mangaTitle, coverImage);
 
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -191,12 +190,6 @@ export default function ChapterReaderPage() {
         </>
       )}
 
-      {/* Chapter completion toast */}
-      <ChapterCompleteToast
-        chapterNum={chapterNum}
-        visible={justCompleted}
-        onDismiss={dismissCompletion}
-      />
     </div>
   );
 }
