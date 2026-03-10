@@ -35,16 +35,7 @@ function getChapterStatus(
   // Check if this chapter is currently downloading
   if (currentProgress && currentProgress.chapterNum === index) {
     const { state, imagesDownloaded, imagesTotal } = currentProgress;
-    if (state === "fetching-pages") {
-      return {
-        status: "SCAN" as const,
-        colorClass: "text-terminal-cyan",
-        bar: "\u2593".repeat(2) + "\u2591".repeat(6),
-        perm: "drwxr-xr-x",
-        statusLabel: "SCAN",
-      };
-    }
-    if (state === "downloading") {
+    if (state === "fetching-pages" || state === "downloading") {
       const filled = imagesTotal > 0 ? Math.round((imagesDownloaded / imagesTotal) * 8) : 0;
       return {
         status: "SYNC" as const,
