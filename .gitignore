@@ -45,4 +45,5 @@ next-env.d.ts
 /downloads
 
 pocketbase/pb_data/*
+pocketbase/pocketbase
 !pocketbase/pb_data/.keep
