@@ -4,6 +4,12 @@ import { useEffect, useRef, useCallback, useState } from "react";
 
 const PRELOAD_AHEAD = 5;
 const MAX_RETRIES = 3;
+// Known image dimensions for manhwa pages — used for placeholder sizing
+const EXPECTED_ASPECT_RATIO = "2 / 3"; // 800x1200
+// Start loading images ~5 pages before they enter the viewport.
+// Each placeholder is ~1200px tall (800px × 2/3 aspect ratio), so we need
+// a margin large enough to cover PRELOAD_AHEAD pages worth of placeholders.
+const OBSERVER_ROOT_MARGIN = "6000px 0px";
 
 type ImageState = "pending" | "loading" | "loaded" | "error";
 
@@ -140,7 +146,7 @@ export function ReaderImageStrip({
         const pageIndex = maxVisibleRef.current;
         onProgressChange(((pageIndex + 1) / imageUrls.length) * 100, pageIndex);
       },
-      { threshold: 0.1 },
+      { threshold: 0.1, rootMargin: OBSERVER_ROOT_MARGIN },
     );
 
     for (const ref of refs) observer.observe(ref);
@@ -172,19 +178,35 @@ export function ReaderImageStrip({
               className="relative w-full"
               style={aspectStyle}
             >
-              {/* Placeholder while loading */}
+              {/* Placeholder — pending (queued) vs loading (fetching from network) */}
               {!isLoaded && !isError && (
-                <div className="flex items-center justify-center h-[300px] border border-terminal-border/20 bg-terminal-bg">
-                  <span className="text-[0.6rem] text-terminal-dim">
-                    {">"} loading image {String(i + 1).padStart(3, "0")}
-                    <span className="blink-cursor">_</span>
-                  </span>
+                <div
+                  className="flex flex-col items-center justify-center gap-3 border border-terminal-border/20 bg-terminal-bg w-full"
+                  style={{ aspectRatio: EXPECTED_ASPECT_RATIO }}
+                >
+                  {entry.state === "loading" ? (
+                    <>
+                      <div className="w-24 h-px text-terminal-green/40 loading-bar-track rounded" />
+                      <span className="text-[0.6rem] text-terminal-dim">
+                        {">"} loading image {String(i + 1).padStart(3, "0")}
+                        <span className="loading-dots" />
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[0.6rem] text-terminal-dim">
+                      {">"} image {String(i + 1).padStart(3, "0")}
+                      <span className="blink-cursor">_</span>
+                    </span>
+                  )}
                 </div>
               )}
 
               {/* Error state with retry */}
               {isError && (
-                <div className="flex flex-col items-center justify-center h-[200px] border border-terminal-orange/30 bg-terminal-orange/[0.03]">
+                <div
+                  className="flex flex-col items-center justify-center border border-terminal-orange/30 bg-terminal-orange/[0.03] w-full"
+                  style={{ aspectRatio: EXPECTED_ASPECT_RATIO }}
+                >
                   <span className="text-[0.6rem] text-terminal-orange">
                     {">"} ERR: failed to load image{" "}
                     {String(i + 1).padStart(3, "0")}
@@ -211,7 +233,7 @@ export function ReaderImageStrip({
                       : url
                   }
                   alt={`Page ${i + 1}`}
-                  loading={i >= resumePageIndex && i <= resumePageIndex + PRELOAD_AHEAD ? "eager" : "lazy"}
+                  loading="eager"
                   className={`w-full block reader-image ${isLoaded ? "" : "h-0 overflow-hidden"}`}
                   onLoad={(e) =>
                     handleImageLoad(i, e.target as HTMLImageElement)
