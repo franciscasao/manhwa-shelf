@@ -6,6 +6,17 @@ import type { SourceChapter } from "@/extensions";
 import type { ChapterProgress, DownloadQueueItem } from "@/lib/types";
 import { useChapterDownload } from "@/hooks/use-chapter-download";
 
+type SortMode = "oldest" | "newest" | "number-asc" | "number-desc";
+
+function formatDate(ts: number | null | undefined): string {
+  if (!ts) return "----------";
+  const d = new Date(ts);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 interface ChapterDirectoryProps {
   totalChapters: number | null;
   downloaded: number;
@@ -86,12 +97,46 @@ function getChapterStatus(
   };
 }
 
+function SortControls({
+  sort,
+  onSort,
+}: {
+  sort: SortMode;
+  onSort: (s: SortMode) => void;
+}) {
+  const options: { value: SortMode; label: string }[] = [
+    { value: "oldest", label: "DATE ↑" },
+    { value: "newest", label: "DATE ↓" },
+    { value: "number-asc", label: "CH# ↑" },
+    { value: "number-desc", label: "CH# ↓" },
+  ];
+  return (
+    <span className="flex items-center gap-1">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onSort(o.value)}
+          className={`font-mono text-[0.55rem] px-1 ${
+            sort === o.value
+              ? "text-terminal-green"
+              : "text-terminal-dim hover:text-terminal-cyan"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 function DirectoryShell({
   entryCount,
   cached,
   readCount,
   onRefresh,
   isRefreshing,
+  sort,
+  onSort,
   children,
 }: {
   entryCount?: number;
@@ -99,6 +144,8 @@ function DirectoryShell({
   readCount?: number;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  sort?: SortMode;
+  onSort?: (s: SortMode) => void;
   children: React.ReactNode;
 }) {
   return (
@@ -110,17 +157,20 @@ function DirectoryShell({
           {cached != null && cached > 0 && <span> — {cached} cached</span>}
           {readCount != null && readCount > 0 && <span className="text-terminal-cyan"> — {readCount} read</span>}
         </span>
-        {onRefresh && (
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className={`font-mono ${
-              isRefreshing ? "text-terminal-orange cursor-wait" : "text-terminal-cyan hover:text-terminal-green"
-            }`}
-          >
-            {isRefreshing ? "[ SCANNING... ]" : "[ REFRESH ]"}
-          </button>
-        )}
+        <span className="flex items-center gap-2">
+          {sort && onSort && <SortControls sort={sort} onSort={onSort} />}
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className={`font-mono ${
+                isRefreshing ? "text-terminal-orange cursor-wait" : "text-terminal-cyan hover:text-terminal-green"
+              }`}
+            >
+              {isRefreshing ? "[ SCANNING... ]" : "[ REFRESH ]"}
+            </button>
+          )}
+        </span>
       </div>
       {children}
     </div>
@@ -184,6 +234,7 @@ function DownloadControls({
 function ChapterRow({
   chapterNum,
   label,
+  datePublished,
   downloaded,
   downloadedChapters,
   completedChapters,
@@ -194,6 +245,7 @@ function ChapterRow({
 }: {
   chapterNum: number;
   label: string;
+  datePublished?: number | null;
   downloaded: number;
   downloadedChapters: Set<number>;
   completedChapters?: Set<number>;
@@ -225,6 +277,7 @@ function ChapterRow({
     >
       <span className="text-terminal-dim w-[80px] shrink-0 hidden sm:inline">{perm}</span>
       <span className="w-[30px] shrink-0">{num}</span>
+      <span className="text-terminal-dim w-[80px] shrink-0 hidden md:inline">{formatDate(datePublished)}</span>
       <span className="truncate flex-1 min-w-0">{label}</span>
       <span className="w-[70px] shrink-0 hidden sm:inline">{bar}</span>
       <span className={`shrink-0 w-[36px] text-right${isChapterCompleted ? " text-terminal-cyan" : ""}`}>{effectiveStatusLabel}</span>
@@ -322,6 +375,7 @@ export function ChapterDirectory({
   } = useChapterDownload(mangaId, mangaTitle);
   const [removingChapter, setRemovingChapter] = useState<number | null>(null);
   const [page, setPage] = useState(0);
+  const [sort, setSort] = useState<SortMode>("oldest");
 
   // Read-only mode: show only downloaded chapters
   if (readOnly && downloadedChaptersList) {
@@ -386,13 +440,35 @@ export function ChapterDirectory({
 
   // Source chapters available
   if (hasChapters) {
-    const sorted = [...chapters].sort((a, b) => (a.datePublished ?? 0) - (b.datePublished ?? 0));
+    // Canonical order: oldest date first — this determines chapter numbers
+    const canonical = [...chapters].sort((a, b) => (a.datePublished ?? 0) - (b.datePublished ?? 0));
+
+    // Build a map from chapter object to its canonical number
+    const chapterNumMap = new Map<SourceChapter, number>();
+    canonical.forEach((ch, idx) => chapterNumMap.set(ch, idx + 1));
+
+    // Display order based on sort mode
+    const sorted = (() => {
+      const arr = [...canonical];
+      switch (sort) {
+        case "newest":
+          return arr.reverse();
+        case "number-asc":
+          return arr.sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+        case "number-desc":
+          return arr.sort((a, b) => (b.number ?? 0) - (a.number ?? 0));
+        case "oldest":
+        default:
+          return arr;
+      }
+    })();
+
     const totalEpisodes = sorted.length;
     const totalPages = Math.ceil(totalEpisodes / PER_PAGE);
     const start = page * PER_PAGE;
     const slice = sorted.slice(start, Math.min(start + PER_PAGE, totalEpisodes));
 
-    const undownloaded = sorted
+    const undownloaded = canonical
       .map((ch, idx) => ({ ch, chapterNum: idx + 1 }))
       .filter(({ chapterNum }) => !downloadedChapters.has(chapterNum));
 
@@ -418,6 +494,11 @@ export function ChapterDirectory({
       enqueueMany(items);
     };
 
+    const handleSort = (s: SortMode) => {
+      setSort(s);
+      setPage(0);
+    };
+
     return (
       <DirectoryShell
         entryCount={totalEpisodes}
@@ -425,6 +506,8 @@ export function ChapterDirectory({
         readCount={completedChapters?.size}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
+        sort={sort}
+        onSort={handleSort}
       >
         {sourceId && (
           <DownloadControls
@@ -444,8 +527,8 @@ export function ChapterDirectory({
         )}
 
         <div className="space-y-0">
-          {slice.map((ch, idx) => {
-            const chapterNum = start + idx + 1;
+          {slice.map((ch) => {
+            const chapterNum = chapterNumMap.get(ch)!;
             const canDl = sourceId && !isDownloading && !isLoadingDownloads && !downloadedChapters.has(chapterNum);
             const isRemoving = removingChapter === chapterNum;
             return (
@@ -453,6 +536,7 @@ export function ChapterDirectory({
                 key={chapterNum}
                 chapterNum={chapterNum}
                 label={ch.title}
+                datePublished={ch.datePublished}
                 {...sharedRowProps}
                 onDownload={
                   canDl
