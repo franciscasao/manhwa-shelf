@@ -13,6 +13,7 @@ Manhwa-Shelf is a manga/manhwa library manager with a retro-terminal aesthetic. 
 - `pnpm lint` — Run ESLint
 - `pnpm db:setup` — Bootstrap PocketBase collections (reads `.env` automatically)
 - No test framework is configured
+- Requires Node.js >=20.9.0
 
 ## PocketBase Setup
 
@@ -66,6 +67,8 @@ All data fetching goes through tRPC. The setup:
 - `source.ts` — Chapter list fetching and caching (fetchChapters query, refreshChapters mutation)
 - `chapter.ts` — Reader data with prev/next navigation (getReader query)
 - `download.ts` — Download queue management with real-time progress via tRPC subscriptions (enqueue, cancel, status, progress)
+- `catalog.ts` — Catalog browsing
+- `history.ts` — Reading history tracking
 
 ### Authentication
 
@@ -101,8 +104,11 @@ To add a new source: implement the `Source` interface, call `registerSource()`, 
 
 1. User triggers download → `use-chapter-download` enqueues `DownloadQueueItem` (with `sourceId` and `chapterUrl`)
 2. Queue processes serially via tRPC `download.enqueue` mutation
-3. Server-side: source extension fetches chapter pages → downloads images in batches of 3 → uploads to `chapterDownloads` collection → updates `shelf` downloaded count and size
-4. Progress streamed back via tRPC subscription (`download.progress`)
+3. Server-side: `DownloadManager` singleton (`src/lib/download-manager.ts`) manages per-manga queues. It extends `EventEmitter` and emits `progress:<mangaId>`, `done:<mangaId>`, and `progress:*` events
+4. Source extension fetches chapter pages → downloads images in batches of 3 → optimizes via `sharp` (`src/lib/image-optimize.ts`: resize to 1600px max, JPEG stays JPEG, PNG→WebP) → uploads to `chapterDownloads` collection → updates `shelf` downloaded count and size
+5. `eventChannel()` (`src/lib/event-channel.ts`) bridges EventEmitter events into async generators for tRPC subscriptions
+6. Progress streamed to client via tRPC subscription (`download.progress` for per-manga, `download.allProgress` for global)
+7. `use-all-downloads` hook subscribes to global progress for the download manager popup
 
 ### ID Mapping
 

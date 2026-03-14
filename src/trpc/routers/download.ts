@@ -31,6 +31,12 @@ export const downloadRouter = createTRPCRouter({
       downloadManager.cancel(input.mangaId);
     }),
 
+  dismissError: baseProcedure
+    .input(z.object({ mangaId: z.string().min(1) }))
+    .mutation(({ input }) => {
+      downloadManager.dismissError(input.mangaId);
+    }),
+
   status: baseProcedure
     .input(z.object({ mangaId: z.string().min(1) }))
     .query(({ input }) => {

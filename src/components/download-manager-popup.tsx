@@ -62,27 +62,30 @@ function buildProgressBar(state: ManagedChapterState): string {
 function MangaEntry({
   snapshot,
   onCancel,
+  onDismiss,
 }: {
   snapshot: MangaProgressSnapshot;
   onCancel: (mangaId: string) => void;
+  onDismiss: (mangaId: string) => void;
 }) {
   const { currentChapter } = snapshot;
+  const isError = !snapshot.isProcessing && currentChapter?.state === "error";
   const totalChapters =
     snapshot.queuedChapters.length +
     snapshot.completedChapters.length +
     (currentChapter ? 1 : 0);
 
   return (
-    <div className="border-t border-terminal-border px-3 py-2.5 first:border-t-0">
+    <div className={`border-t border-terminal-border px-3 py-2.5 first:border-t-0 ${isError ? "bg-red-950/20" : ""}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-mono text-xs font-bold text-terminal-green">
+        <span className={`truncate font-mono text-xs font-bold ${isError ? "text-red-400" : "text-terminal-green"}`}>
           {snapshot.mangaTitle || snapshot.mangaId}
         </span>
         <button
-          onClick={() => onCancel(snapshot.mangaId)}
+          onClick={() => isError ? onDismiss(snapshot.mangaId) : onCancel(snapshot.mangaId)}
           className="shrink-0 cursor-pointer font-mono text-[10px] text-red-400 transition-colors hover:text-red-300"
         >
-          [ CANCEL ]
+          {isError ? "[ DISMISS ]" : "[ CANCEL ]"}
         </button>
       </div>
 
@@ -101,6 +104,12 @@ function MangaEntry({
         </div>
       )}
 
+      {isError && currentChapter?.error && (
+        <div className="mt-1 font-mono text-[10px] text-red-400/80 truncate">
+          {currentChapter.error}
+        </div>
+      )}
+
       <div className="mt-1 font-mono text-[10px] text-terminal-dim">
         {snapshot.completedChapters.length}/{totalChapters} chapters
         {snapshot.queuedChapters.length > 0 && (
@@ -112,7 +121,7 @@ function MangaEntry({
 }
 
 export function DownloadManagerPopup() {
-  const { snapshots, activeCount, isActive, cancelManga } = useAllDownloads();
+  const { snapshots, activeCount, isActive, cancelManga, dismissError } = useAllDownloads();
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -184,6 +193,7 @@ export function DownloadManagerPopup() {
                 key={snapshot.mangaId}
                 snapshot={snapshot}
                 onCancel={cancelManga}
+                onDismiss={dismissError}
               />
             ))}
           </div>

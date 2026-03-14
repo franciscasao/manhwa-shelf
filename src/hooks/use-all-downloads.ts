@@ -35,27 +35,36 @@ export function useAllDownloads() {
     [trpcClient],
   );
 
-  const activeSnapshots = useMemo(
-    () => snapshots.filter((s) => s.isProcessing),
+  const dismissError = useCallback(
+    (mangaId: string) => {
+      trpcClient.download.dismissError.mutate({ mangaId });
+      setSnapshots((prev) => prev.filter((s) => s.mangaId !== mangaId));
+    },
+    [trpcClient],
+  );
+
+  const visibleSnapshots = useMemo(
+    () => snapshots.filter((s) => s.isProcessing || s.currentChapter?.state === "error"),
     [snapshots],
   );
 
-  const activeCount = activeSnapshots.length;
+  const activeCount = visibleSnapshots.length;
 
   const totalQueued = useMemo(
     () =>
-      activeSnapshots.reduce(
+      visibleSnapshots.reduce(
         (sum, s) => sum + s.queuedChapters.length + (s.currentChapter ? 1 : 0),
         0,
       ),
-    [activeSnapshots],
+    [visibleSnapshots],
   );
 
   return {
-    snapshots: activeSnapshots,
+    snapshots: visibleSnapshots,
     activeCount,
     totalQueued,
     cancelManga,
+    dismissError,
     isActive: activeCount > 0,
   };
 }

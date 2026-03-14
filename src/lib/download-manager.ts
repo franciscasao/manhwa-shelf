@@ -23,28 +23,29 @@ interface MangaDownloadQueue {
 
 class DownloadManager extends EventEmitter {
   private queues = new Map<string, MangaDownloadQueue>();
+  private retainedErrors = new Map<
+    string,
+    { snapshot: MangaProgressSnapshot; timeout: ReturnType<typeof setTimeout> }
+  >();
 
-  enqueue(
-    mangaId: string,
-    mangaTitle: string,
-    items: DownloadJob[],
-  ): MangaProgressSnapshot {
+  enqueue(mangaId: string, mangaTitle: string, items: DownloadJob[]): MangaProgressSnapshot {
     const existing = this.queues.get(mangaId);
 
     if (existing) {
       // Deduplicate: skip chapters already queued, in-progress, or completed this session
-      const activeNums = new Set<number>([
-        ...existing.jobs.map((j) => j.chapterNum),
-        ...existing.completedChapters,
-      ]);
+      const activeNums = new Set<number>([...existing.jobs.map((j) => j.chapterNum), ...existing.completedChapters]);
       if (existing.currentJob) activeNums.add(existing.currentJob.chapterNum);
 
       const newJobs = items.filter((item) => !activeNums.has(item.chapterNum));
       existing.jobs.push(...newJobs);
+      console.log(`[download] append ${newJobs.length} jobs to ${mangaId} (${existing.jobs.length} total queued)`);
       const snapshot = this.getSnapshot(mangaId)!;
       this.emit(`progress:${mangaId}`, snapshot);
       return snapshot;
     }
+
+    // Clear any retained error for this manga
+    this.clearRetainedError(mangaId);
 
     // Create a new queue
     const queue: MangaDownloadQueue = {
@@ -58,8 +59,39 @@ class DownloadManager extends EventEmitter {
     };
     this.queues.set(mangaId, queue);
 
-    // Start processing (fire-and-forget)
-    this.processQueue(mangaId);
+    // Emit progress immediately so the popup appears
+    this.emit(`progress:${mangaId}`, this.getSnapshot(mangaId)!);
+    this.emit("progress:*", this.getAllActive());
+
+    // Start processing with error handling
+    this.processQueue(mangaId).catch((err) => {
+      console.error(`[download] processQueue crashed for ${mangaId}:`, err);
+      const q = this.queues.get(mangaId);
+      if (!q) return;
+      const chapterNum = q.currentJob?.chapterNum ?? q.jobs[0]?.chapterNum;
+      this.queues.delete(mangaId);
+      const errorSnapshot: MangaProgressSnapshot = {
+        mangaId,
+        mangaTitle: q.mangaTitle,
+        currentChapter:
+          chapterNum != null
+            ? {
+                chapterNum,
+                state: "error",
+                imagesDownloaded: 0,
+                imagesTotal: 0,
+                error: err instanceof Error ? err.message : "Download pipeline crashed",
+              }
+            : null,
+        queuedChapters: [],
+        completedChapters: q.completedChapters,
+        isProcessing: false,
+      };
+      this.retainError(errorSnapshot);
+      this.emit(`progress:${mangaId}`, errorSnapshot);
+      this.emit(`done:${mangaId}`);
+      this.emit("progress:*", this.getAllActive());
+    });
 
     return this.getSnapshot(mangaId)!;
   }
@@ -93,7 +125,35 @@ class DownloadManager extends EventEmitter {
       const snapshot = this.getSnapshot(mangaId);
       if (snapshot) snapshots.push(snapshot);
     }
+    // Include retained errors not already in active queues
+    for (const [mangaId, { snapshot }] of this.retainedErrors) {
+      if (!this.queues.has(mangaId)) {
+        snapshots.push(snapshot);
+      }
+    }
     return snapshots;
+  }
+
+  dismissError(mangaId: string): void {
+    this.clearRetainedError(mangaId);
+    this.emit("progress:*", this.getAllActive());
+  }
+
+  private retainError(snapshot: MangaProgressSnapshot): void {
+    this.clearRetainedError(snapshot.mangaId);
+    const timeout = setTimeout(() => {
+      this.retainedErrors.delete(snapshot.mangaId);
+      this.emit("progress:*", this.getAllActive());
+    }, 15_000);
+    this.retainedErrors.set(snapshot.mangaId, { snapshot, timeout });
+  }
+
+  private clearRetainedError(mangaId: string): void {
+    const entry = this.retainedErrors.get(mangaId);
+    if (entry) {
+      clearTimeout(entry.timeout);
+      this.retainedErrors.delete(mangaId);
+    }
   }
 
   private getSnapshot(mangaId: string): MangaProgressSnapshot | null {
@@ -114,6 +174,7 @@ class DownloadManager extends EventEmitter {
     const queue = this.queues.get(mangaId);
     if (!queue) return;
 
+    console.log(`[download] processQueue started for ${mangaId}`);
     const pb = await getServerPB();
     const signal = queue.abortController.signal;
 
@@ -121,6 +182,7 @@ class DownloadManager extends EventEmitter {
       if (signal.aborted) return;
 
       const job = queue.jobs.shift()!;
+      console.log(`[download] processing ch.${job.chapterNum} (source: ${job.sourceId}) for ${mangaId}`);
       queue.currentJob = job;
       queue.currentState = {
         chapterNum: job.chapterNum,
@@ -146,7 +208,9 @@ class DownloadManager extends EventEmitter {
         }
 
         // 1. Fetch page images
+        console.log(`[download] fetching pages for ch.${job.chapterNum} from ${job.chapterUrl}`);
         const pages = await source.fetchChapterPages(job.chapterUrl);
+        console.log(`[download] got ${pages.length} pages for ch.${job.chapterNum}`);
         if (signal.aborted) return;
 
         if (pages.length === 0) {
@@ -220,11 +284,9 @@ class DownloadManager extends EventEmitter {
 
         const sizeBytes = imageData.reduce((sum, img) => sum + img.buffer.byteLength, 0);
 
-        const existing = await pb
-          .collection("chapterDownloads")
-          .getList(1, 1, {
-            filter: `mangaId = "${mangaId}" && chapterNum = ${job.chapterNum}`,
-          });
+        const existing = await pb.collection("chapterDownloads").getList(1, 1, {
+          filter: `mangaId = "${mangaId}" && chapterNum = ${job.chapterNum}`,
+        });
 
         const formData = new FormData();
         formData.append("mangaId", mangaId);
@@ -235,7 +297,13 @@ class DownloadManager extends EventEmitter {
 
         for (let i = 0; i < imageData.length; i++) {
           const { buffer, contentType } = imageData[i];
-          const ext = contentType.includes("gif") ? "gif" : contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+          const ext = contentType.includes("gif")
+            ? "gif"
+            : contentType.includes("png")
+              ? "png"
+              : contentType.includes("webp")
+                ? "webp"
+                : "jpg";
           const fileName = `${String(i + 1).padStart(3, "0")}.${ext}`;
           formData.append("images", new Blob([buffer.buffer as ArrayBuffer], { type: contentType }), fileName);
         }
@@ -248,18 +316,13 @@ class DownloadManager extends EventEmitter {
 
         // 4. Update shelf downloaded count and size
         try {
-          const allChapters = await pb
-            .collection("chapterDownloads")
-            .getFullList({
-              filter: `mangaId = "${mangaId}"`,
-              fields: "sizeBytes",
-            });
+          const allChapters = await pb.collection("chapterDownloads").getFullList({
+            filter: `mangaId = "${mangaId}"`,
+            fields: "sizeBytes",
+          });
 
           const totalChapters = allChapters.length;
-          const totalBytes = allChapters.reduce(
-            (sum, ch) => sum + (ch.sizeBytes || 0),
-            0,
-          );
+          const totalBytes = allChapters.reduce((sum, ch) => sum + (ch.sizeBytes || 0), 0);
           const formattedSize =
             totalBytes >= 1024 * 1024 * 1024
               ? `${(totalBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
@@ -285,6 +348,7 @@ class DownloadManager extends EventEmitter {
         if (signal.aborted) return;
 
         // Mark complete
+        console.log(`[download] ch.${job.chapterNum} complete for ${mangaId} (${downloaded} images)`);
         queue.currentState = {
           chapterNum: job.chapterNum,
           state: "complete",
@@ -296,6 +360,7 @@ class DownloadManager extends EventEmitter {
       } catch (err) {
         if (signal.aborted) return;
 
+        console.error(`[download] ch.${job.chapterNum} failed for ${mangaId}:`, err);
         queue.currentState = {
           chapterNum: job.chapterNum,
           state: "error",
@@ -309,18 +374,23 @@ class DownloadManager extends EventEmitter {
     }
 
     // Queue fully processed
+    const lastState = queue.currentState;
     queue.currentJob = null;
     queue.currentState = null;
     const mangaTitle = queue.mangaTitle;
     const finalSnapshot: MangaProgressSnapshot = {
       mangaId,
       mangaTitle,
-      currentChapter: null,
+      currentChapter: lastState?.state === "error" ? lastState : null,
       queuedChapters: [],
       completedChapters: queue.completedChapters,
       isProcessing: false,
     };
     this.queues.delete(mangaId);
+    if (lastState?.state === "error") {
+      this.retainError(finalSnapshot);
+    }
+    console.log(`[download] queue finished for ${mangaId} (${queue.completedChapters.length} chapters)`);
     this.emit(`progress:${mangaId}`, finalSnapshot);
     this.emit(`done:${mangaId}`);
     this.emit("progress:*", this.getAllActive());

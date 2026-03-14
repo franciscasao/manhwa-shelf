@@ -45,15 +45,13 @@ function decryptImageUrl(encryptedUrl: string, did: string): string {
   return aesDecrypt(encryptedUrl, key, iv);
 }
 
-interface ApiEnvelope {
-  ts: number;
-  data: string;
-}
-
-async function apiCall<T>(endpoint: string, params: Record<string, string> = {}, existingDid?: string): Promise<{ data: T; did: string }> {
+async function apiCall<T>(
+  endpoint: string,
+  params: Record<string, string> = {},
+  existingDid?: string,
+): Promise<{ data: T; did: string }> {
   const did = existingDid ?? generateRandomString(24);
-  const ts = Date.now();
-  const searchParams = new URLSearchParams({ ...params, did, ts: String(ts) });
+  const searchParams = new URLSearchParams(params);
   const url = `${API_BASE}${endpoint}?${searchParams.toString()}`;
 
   const res = await fetch(url, {
@@ -71,8 +69,26 @@ async function apiCall<T>(endpoint: string, params: Record<string, string> = {},
     throw new Error(`QToon API returned ${res.status} for ${endpoint}`);
   }
 
-  const envelope = (await res.json()) as ApiEnvelope;
-  const data = decryptApiResponse<T>(envelope.data, envelope.ts, did);
+  const envelope = (await res.json()) as Record<string, unknown>;
+  if (typeof envelope.code === "number" && envelope.code !== 0) {
+    throw new Error(`QToon API error code ${envelope.code} for ${endpoint}`);
+  }
+
+  if (typeof envelope.data !== "string" || typeof envelope.ts !== "number") {
+    throw new Error(
+      `QToon API returned unexpected response shape for ${endpoint}: keys=[${Object.keys(envelope).join(",")}]`,
+    );
+  }
+
+  let data: T;
+  try {
+    data = decryptApiResponse<T>(envelope.data, envelope.ts, did);
+  } catch (decryptErr) {
+    console.error(`[qtoon] decryption failed for ${endpoint}:`, decryptErr);
+    throw new Error(
+      `QToon decryption failed for ${endpoint}: ${decryptErr instanceof Error ? decryptErr.message : "unknown error"}`,
+    );
+  }
 
   return { data, did };
 }
@@ -161,20 +177,16 @@ const qtoon: Source = {
     // Use a single did for all requests in this session so decryption keys match
     const did = generateRandomString(24);
 
-    const { data: episodeDetail } = await apiCall<EpisodeDetailResponse>(
-      "/api/w/comic/episode/detail",
-      { esid },
-      did,
-    );
+    const { data: episodeDetail } = await apiCall<EpisodeDetailResponse>("/api/w/comic/episode/detail", { esid }, did);
 
     const rawPages: Array<{ url: string; rgIdx: number }> = [];
 
     for (const def of episodeDetail.definitions ?? []) {
-      let page = 0;
+      let page = 1;
       while (true) {
         const { data: group } = await apiCall<ResourceGroupResponse>(
           "/api/w/resource/group/rslv",
-          { token: def.token, rg: String(page) },
+          { token: def.token, page: String(page) },
           did,
         );
 
