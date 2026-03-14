@@ -144,7 +144,7 @@ function SearchPageInner() {
         </div>
 
         {/* SECTION 1.5: Origin toggle */}
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-[0.65rem] text-terminal-muted tracking-widest mr-1">
             MODE:
           </span>
