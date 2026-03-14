@@ -85,6 +85,11 @@ export function LibraryListRow({ manga, index, onRemove }: LibraryListRowProps) 
           {manga.sizeOnDisk}
         </div>
 
+        {/* Avg chapter size */}
+        <div className="hidden lg:block shrink-0 text-xs text-terminal-dim tabular-nums w-20 text-right">
+          {manga.avgChapterSize || "—"}
+        </div>
+
         {/* Rating */}
         <div className="hidden lg:block shrink-0 text-xs text-terminal-orange tabular-nums w-10 text-right">
           {manga.rating > 0 ? `★ ${manga.rating}` : "—"}
