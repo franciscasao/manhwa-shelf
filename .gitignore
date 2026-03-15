@@ -47,3 +47,4 @@ next-env.d.ts
 pocketbase/pb_data/*
 pocketbase/pocketbase
 !pocketbase/pb_data/.keep
+!pocketbase/pb_data/types.d.ts

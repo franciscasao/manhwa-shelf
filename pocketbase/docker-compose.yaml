@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  pocketbase:
+    image: adrianmusante/pocketbase:latest
+    container_name: pocketbase
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Maps the persistent database (this stays out of Git)
+      - pb_data:/pb/pb_data
+
+      # Maps your Git-tracked migrations and hooks into the container
+      - ./pb_migrations:/pb/pb_migrations
+      - ./pb_hooks:/pb/pb_hooks
+
+volumes:
+  # Defines the named volume for Dokploy to manage
+  pb_data:

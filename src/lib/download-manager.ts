@@ -38,7 +38,6 @@ class DownloadManager extends EventEmitter {
 
       const newJobs = items.filter((item) => !activeNums.has(item.chapterNum));
       existing.jobs.push(...newJobs);
-      console.log(`[download] append ${newJobs.length} jobs to ${mangaId} (${existing.jobs.length} total queued)`);
       const snapshot = this.getSnapshot(mangaId)!;
       this.emit(`progress:${mangaId}`, snapshot);
       return snapshot;
@@ -174,7 +173,6 @@ class DownloadManager extends EventEmitter {
     const queue = this.queues.get(mangaId);
     if (!queue) return;
 
-    console.log(`[download] processQueue started for ${mangaId}`);
     const pb = await getServerPB();
     const signal = queue.abortController.signal;
 
@@ -182,7 +180,6 @@ class DownloadManager extends EventEmitter {
       if (signal.aborted) return;
 
       const job = queue.jobs.shift()!;
-      console.log(`[download] processing ch.${job.chapterNum} (source: ${job.sourceId}) for ${mangaId}`);
       queue.currentJob = job;
       queue.currentState = {
         chapterNum: job.chapterNum,
@@ -208,9 +205,7 @@ class DownloadManager extends EventEmitter {
         }
 
         // 1. Fetch page images
-        console.log(`[download] fetching pages for ch.${job.chapterNum} from ${job.chapterUrl}`);
         const pages = await source.fetchChapterPages(job.chapterUrl);
-        console.log(`[download] got ${pages.length} pages for ch.${job.chapterNum}`);
         if (signal.aborted) return;
 
         if (pages.length === 0) {
@@ -348,7 +343,6 @@ class DownloadManager extends EventEmitter {
         if (signal.aborted) return;
 
         // Mark complete
-        console.log(`[download] ch.${job.chapterNum} complete for ${mangaId} (${downloaded} images)`);
         queue.currentState = {
           chapterNum: job.chapterNum,
           state: "complete",
@@ -390,7 +384,6 @@ class DownloadManager extends EventEmitter {
     if (lastState?.state === "error") {
       this.retainError(finalSnapshot);
     }
-    console.log(`[download] queue finished for ${mangaId} (${queue.completedChapters.length} chapters)`);
     this.emit(`progress:${mangaId}`, finalSnapshot);
     this.emit(`done:${mangaId}`);
     this.emit("progress:*", this.getAllActive());

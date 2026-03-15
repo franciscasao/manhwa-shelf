@@ -45,3 +45,4 @@ export {
 import "./webtoons";
 import "./tapas";
 import "./qtoon";
+import "./manhwaclan";
