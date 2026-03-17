@@ -37,6 +37,8 @@ async function main() {
         { name: "sizeOnDisk", type: "text" },
         { name: "lastUpdated", type: "text" },
         { name: "origin", type: "select", values: ["KR", "JP", "CN", "TW"] },
+        { name: "sourceId", type: "text" },
+        { name: "seriesId", type: "text" },
       ],
       listRule: "@request.auth.id != '' && @request.auth.verified = true",
       viewRule: "@request.auth.id != '' && @request.auth.verified = true",
