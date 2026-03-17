@@ -16,6 +16,9 @@ function recordToManga(record: Record<string, unknown>): Manga {
     sizeOnDisk: record["sizeOnDisk"] as string,
     lastUpdated: record["lastUpdated"] as string,
     origin: record["origin"] as Manga["origin"],
+    status: (record["status"] as string) || undefined,
+    sourceId: (record["sourceId"] as string) || undefined,
+    seriesId: (record["seriesId"] as string) || undefined,
   };
 }
 
@@ -94,6 +97,21 @@ export function useShelf() {
     [shelf],
   );
 
+  const updateShelfMeta = useCallback(
+    async (id: string, meta: { status?: string; sourceId?: string; seriesId?: string }) => {
+      const entry = shelf?.find((m) => m.id === id);
+      if (!entry) return;
+      // Only update if there's actually new info to persist
+      const needsUpdate =
+        (meta.status && meta.status !== entry.status) ||
+        (meta.sourceId && meta.sourceId !== entry.sourceId) ||
+        (meta.seriesId && meta.seriesId !== entry.seriesId);
+      if (!needsUpdate) return;
+      await pb.collection("shelf").update(id, meta);
+    },
+    [shelf],
+  );
+
   const isOnShelf = useCallback(
     (id: string): boolean => {
       return shelf?.some((m) => m.id === id) ?? false;
@@ -108,5 +126,6 @@ export function useShelf() {
     removeFromShelf,
     isOnShelf,
     updateChaptersTotal,
+    updateShelfMeta,
   };
 }

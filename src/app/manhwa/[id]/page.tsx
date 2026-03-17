@@ -38,7 +38,7 @@ export default function ManhwaDetailPage() {
 
   const { media, isLoading, error: fetchError } = useMediaDetail(id);
   const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
-  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
+  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal, updateShelfMeta } = useShelf();
 
   const activeSource = media ? findActiveSource(media.externalLinks) : null;
   const {
@@ -82,10 +82,25 @@ export default function ManhwaDetailPage() {
     }
   }, [isAuthenticated, resolvedTotal, mangaId, isOnShelf, updateChaptersTotal]);
 
+  // Backfill status and source info for existing shelf entries
+  useEffect(() => {
+    if (!isAuthenticated || !media || !isOnShelf(mangaId)) return;
+    updateShelfMeta(mangaId, {
+      status: media.status ?? undefined,
+      sourceId: activeSource?.sourceId,
+      seriesId: activeSource?.seriesId,
+    });
+  }, [isAuthenticated, media, activeSource, mangaId, isOnShelf, updateShelfMeta]);
+
   const handleAdd = () => {
     if (!media) return;
     const manga = mapAniListToManga(media, (media.countryOfOrigin as MangaOrigin) ?? "KR");
-    addToShelf(manga);
+    addToShelf({
+      ...manga,
+      status: media.status ?? undefined,
+      sourceId: activeSource?.sourceId,
+      seriesId: activeSource?.seriesId,
+    });
   };
 
   const handleRemove = () => {

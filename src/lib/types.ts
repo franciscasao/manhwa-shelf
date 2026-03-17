@@ -73,4 +73,10 @@ export type Manga = {
   sizeOnDisk: string;
   lastUpdated: string;
   origin: MangaOrigin;
+  /** AniList media status (e.g. "RELEASING", "FINISHED") */
+  status?: string;
+  /** Source extension ID for chapter fetching */
+  sourceId?: string;
+  /** Series ID within the source extension */
+  seriesId?: string;
 };
