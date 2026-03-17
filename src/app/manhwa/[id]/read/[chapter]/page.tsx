@@ -34,6 +34,7 @@ export default function ChapterReaderPage() {
 
   const [toolbarVisible, setToolbarVisible] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [allPagesVisible, setAllPagesVisible] = useState(false);
   const lastScrollY = useRef(0);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -65,6 +66,7 @@ export default function ChapterReaderPage() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
     setProgress(0);
+    setAllPagesVisible(false);
     setToolbarVisible(true);
     hasPrefetchedRef.current = false;
   }, [chapterNum]);
@@ -176,8 +178,10 @@ export default function ChapterReaderPage() {
               onProgressChange={handleProgressChange}
               onTap={handleTap}
               resumePageIndex={resumePageIndex}
+              onAllPagesVisible={setAllPagesVisible}
             />
 
+            {allPagesVisible && (
             <div className="mx-auto max-w-[800px] mt-4 mb-8 px-3 pb-[env(safe-area-inset-bottom)]">
               <ReaderBottomNav
                 anilistId={anilistId}
@@ -186,6 +190,7 @@ export default function ChapterReaderPage() {
                 nextChapter={chapter.nextChapter}
               />
             </div>
+            )}
           </div>
         </>
       )}
