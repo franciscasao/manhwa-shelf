@@ -206,7 +206,15 @@ export default function ManhwaDetailPage() {
               <span className="text-terminal-green">DB</span>
               <span className="text-terminal-dim">]</span> media #{media.id}
               <span className="mx-2">|</span>
-              source: anilist
+              source:{" "}
+              <a
+                href={`https://anilist.co/manga/${media.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-terminal-cyan hover:underline"
+              >
+                anilist
+              </a>
               <span className="mx-2">|</span>
               {isOnShelf(toPocketBaseId(id)) ? (
                 <span className="text-terminal-green">on shelf</span>

@@ -23,13 +23,7 @@
  */
 
 // Re-export types
-export type {
-  Source,
-  SourceIdentifier,
-  SourceChapter,
-  SourcePage,
-  SourceMangaDetails,
-} from "./types";
+export type { Source, SourceIdentifier, SourceChapter, SourcePage, SourceMangaDetails } from "./types";
 
 // Re-export registry
 export {
@@ -43,6 +37,6 @@ export {
 
 // Import extensions to trigger auto-registration
 import "./webtoons";
-import "./tapas";
 import "./qtoon";
+import "./tapas";
 import "./manhwaclan";
