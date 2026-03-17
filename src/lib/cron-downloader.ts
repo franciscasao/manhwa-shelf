@@ -1,12 +1,10 @@
 import { getServerPB } from "@/lib/db-server";
-import { getSource, getAllSources } from "@/extensions";
+import { getSource } from "@/extensions";
 import { downloadManager } from "@/lib/download-manager";
 import type { SourceChapter } from "@/extensions/types";
 
 const CHAPTERS_PER_SOURCE = 40;
-const CRON_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
-let cronTimer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
 
 interface ShelfEntry {
@@ -19,6 +17,9 @@ interface ShelfEntry {
 /**
  * Run the cron download job: for each source, download up to 40
  * not-yet-downloaded chapters across all shelf entries linked to that source.
+ *
+ * Scheduling is handled by PocketBase's cronAdd() in pb_hooks/cron_download.pb.js.
+ * This function is called via the internal API route /api/internal/cron-download.
  */
 export async function runCronDownload(): Promise<{
   enqueued: number;
@@ -135,39 +136,4 @@ export async function runCronDownload(): Promise<{
   }
 
   return result;
-}
-
-/** Start the 12-hour cron timer. Safe to call multiple times. */
-export function startCronScheduler(): void {
-  if (cronTimer) return;
-
-  // Ensure sources are registered
-  getAllSources();
-
-  console.log("[cron] Starting chapter download scheduler (every 12 hours)");
-  cronTimer = setInterval(() => {
-    console.log(`[cron] Triggering scheduled download at ${new Date().toISOString()}`);
-    runCronDownload().catch((err) => {
-      console.error("[cron] Unhandled error in scheduled download:", err);
-    });
-  }, CRON_INTERVAL_MS);
-
-  // Don't block Node.js from exiting
-  if (cronTimer.unref) {
-    cronTimer.unref();
-  }
-}
-
-/** Stop the cron timer. */
-export function stopCronScheduler(): void {
-  if (cronTimer) {
-    clearInterval(cronTimer);
-    cronTimer = null;
-    console.log("[cron] Chapter download scheduler stopped");
-  }
-}
-
-/** Check if the cron scheduler is active. */
-export function isCronRunning(): boolean {
-  return cronTimer !== null;
 }
