@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 
 const PRELOAD_AHEAD = 5;
+const BATCH_SIZE = 5;
 const MAX_RETRIES = 3;
 // Known image dimensions for manhwa pages — used for placeholder sizing
 const EXPECTED_ASPECT_RATIO = "2 / 3"; // 800x1200
@@ -25,6 +26,7 @@ interface ReaderImageStripProps {
   onProgressChange: (progress: number, pageIndex: number) => void;
   onTap: () => void;
   resumePageIndex?: number;
+  onAllPagesVisible?: (visible: boolean) => void;
 }
 
 export function ReaderImageStrip({
@@ -32,13 +34,30 @@ export function ReaderImageStrip({
   onProgressChange,
   onTap,
   resumePageIndex = 0,
+  onAllPagesVisible,
 }: ReaderImageStripProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRefs = useRef<(HTMLDivElement | null)[]>([]);
   const maxVisibleRef = useRef(resumePageIndex);
   const hasScrolledToResume = useRef(false);
 
-  // Initialize loading: load a window around the resume page first, then load from 0
+  // Lazy loading: only render pages up to visibleEnd.
+  // Pages before resume are already read; load BATCH_SIZE pages after resume.
+  const [visibleEnd, setVisibleEnd] = useState(() =>
+    Math.min(imageUrls.length, resumePageIndex + BATCH_SIZE),
+  );
+  const allPagesVisible = visibleEnd >= imageUrls.length;
+
+  // Notify parent when all pages become visible
+  useEffect(() => {
+    onAllPagesVisible?.(allPagesVisible);
+  }, [allPagesVisible, onAllPagesVisible]);
+
+  const loadNextBatch = useCallback(() => {
+    setVisibleEnd((prev) => Math.min(imageUrls.length, prev + BATCH_SIZE));
+  }, [imageUrls.length]);
+
+  // Initialize loading: load a window around the resume page first
   const [images, setImages] = useState<ImageEntry[]>(() => {
     const start = Math.max(0, resumePageIndex);
     const end = Math.min(imageUrls.length - 1, start + PRELOAD_AHEAD);
@@ -49,14 +68,17 @@ export function ReaderImageStrip({
   });
 
   // Mark an image as loading when it enters the preload window
-  const triggerLoad = useCallback((index: number) => {
-    setImages((prev) => {
-      if (prev[index]?.state !== "pending") return prev;
-      const next = [...prev];
-      next[index] = { ...next[index], state: "loading" };
-      return next;
-    });
-  }, []);
+  const triggerLoad = useCallback(
+    (index: number) => {
+      setImages((prev) => {
+        if (prev[index]?.state !== "pending") return prev;
+        const next = [...prev];
+        next[index] = { ...next[index], state: "loading" };
+        return next;
+      });
+    },
+    [],
+  );
 
   const handleImageLoad = useCallback(
     (index: number, img: HTMLImageElement) => {
@@ -70,7 +92,7 @@ export function ReaderImageStrip({
         };
         return next;
       });
-      // Preload upcoming images when one loads
+      // Preload upcoming images when one loads (only within visible range)
       for (let i = index + 1; i <= index + PRELOAD_AHEAD && i < imageUrls.length; i++) {
         triggerLoad(i);
       }
@@ -115,10 +137,9 @@ export function ReaderImageStrip({
     }
   }, [images, resumePageIndex]);
 
-  // Also preload images before resume page (load pages 0..resumePageIndex-1) after initial render
+  // Preload images before resume page (already-read pages) after initial render
   useEffect(() => {
     if (resumePageIndex <= 0) return;
-    // Kick off loading for pages before the resume point in the background
     for (let i = 0; i < resumePageIndex; i++) {
       triggerLoad(i);
     }
@@ -137,7 +158,7 @@ export function ReaderImageStrip({
             if (idx > maxVisibleRef.current) {
               maxVisibleRef.current = idx;
             }
-            // Preload images ahead of viewport
+            // Preload images ahead of viewport (within visible range)
             for (let i = idx + 1; i <= idx + PRELOAD_AHEAD && i < imageUrls.length; i++) {
               triggerLoad(i);
             }
@@ -151,12 +172,15 @@ export function ReaderImageStrip({
 
     for (const ref of refs) observer.observe(ref);
     return () => observer.disconnect();
-  }, [imageUrls.length, onProgressChange, triggerLoad]);
+  }, [imageUrls.length, onProgressChange, triggerLoad, visibleEnd]);
+
+  // How many pages remain beyond the current visible window
+  const remainingPages = imageUrls.length - visibleEnd;
 
   return (
     <div ref={containerRef} className="w-full" onClick={onTap}>
       <div className="mx-auto max-w-[800px]">
-        {imageUrls.map((url, i) => {
+        {imageUrls.slice(0, visibleEnd).map((url, i) => {
           const entry = images[i] ?? { state: "pending" as const, retries: 0 };
           const shouldRender = entry.state !== "pending";
           const isLoaded = entry.state === "loaded";
@@ -244,6 +268,26 @@ export function ReaderImageStrip({
             </div>
           );
         })}
+
+        {/* Load next batch button */}
+        {!allPagesVisible && (
+          <div className="py-8 flex flex-col items-center gap-3">
+            <span className="text-[0.65rem] text-terminal-dim">
+              {">"} showing {visibleEnd} of {imageUrls.length} pages
+              {" — "}{remainingPages} remaining
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                loadNextBatch();
+              }}
+              className="px-6 py-3 border border-terminal-green/40 text-terminal-green text-xs
+                hover:bg-terminal-green/10 hover:border-terminal-green/60 transition-colors"
+            >
+              [ LOAD NEXT {Math.min(BATCH_SIZE, remainingPages)} PAGES ]
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
