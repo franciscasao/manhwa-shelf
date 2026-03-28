@@ -94,6 +94,22 @@ export function useShelf() {
     [shelf],
   );
 
+  const linkSource = useCallback(
+    async (id: string, sourceId: string, seriesId: string) => {
+      const entry = shelf?.find((m) => m.id === id);
+      if (!entry) return;
+      // Avoid redundant updates by checking current record
+      try {
+        const record = await pb.collection("shelf").getOne(id);
+        if (record["sourceId"] === sourceId && record["seriesId"] === seriesId) return;
+      } catch {
+        return;
+      }
+      await pb.collection("shelf").update(id, { sourceId, seriesId });
+    },
+    [shelf],
+  );
+
   const isOnShelf = useCallback(
     (id: string): boolean => {
       return shelf?.some((m) => m.id === id) ?? false;
@@ -108,5 +124,6 @@ export function useShelf() {
     removeFromShelf,
     isOnShelf,
     updateChaptersTotal,
+    linkSource,
   };
 }

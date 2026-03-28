@@ -38,7 +38,7 @@ export default function ManhwaDetailPage() {
 
   const { media, isLoading, error: fetchError } = useMediaDetail(id);
   const error = !id || isNaN(id) ? "Invalid media ID" : fetchError;
-  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal } = useShelf();
+  const { shelf, addToShelf, removeFromShelf, isOnShelf, updateChaptersTotal, linkSource } = useShelf();
 
   const activeSource = media ? findActiveSource(media.externalLinks) : null;
   const {
@@ -81,6 +81,13 @@ export default function ManhwaDetailPage() {
       updateChaptersTotal(mangaId, resolvedTotal);
     }
   }, [isAuthenticated, resolvedTotal, mangaId, isOnShelf, updateChaptersTotal]);
+
+  // Persist source mapping to shelf for cron auto-downloads
+  useEffect(() => {
+    if (isAuthenticated && activeSource && isOnShelf(mangaId)) {
+      linkSource(mangaId, activeSource.sourceId, activeSource.seriesId);
+    }
+  }, [isAuthenticated, activeSource, mangaId, isOnShelf, linkSource]);
 
   const handleAdd = () => {
     if (!media) return;
