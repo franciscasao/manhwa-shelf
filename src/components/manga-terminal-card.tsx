@@ -97,7 +97,10 @@ export function MangaTerminalCard({
                 <StatusBadge status={status} />
                 <span className="text-[0.6rem] text-terminal-muted tabular-nums ml-auto">{chaptersStr} ch</span>
               </div>
-              <div className="text-[0.6rem] text-terminal-dim tabular-nums pt-2">{manga.sizeOnDisk}</div>
+              <div className="flex items-center justify-between text-[0.6rem] text-terminal-dim tabular-nums pt-2">
+                <span>{manga.sizeOnDisk}</span>
+                {manga.avgChapterSize && <span>~{manga.avgChapterSize}/ch</span>}
+              </div>
             </>
           )}
         </div>

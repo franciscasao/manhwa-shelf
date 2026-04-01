@@ -12,6 +12,7 @@ function recordToManga(record: Record<string, unknown>): Manga {
     rating: record["rating"] as number,
     chapters: record["chapters"] as { downloaded: number; total: number | null },
     sizeOnDisk: record["sizeOnDisk"] as string,
+    avgChapterSize: (record["avgChapterSize"] as string) || "",
     lastUpdated: record["lastUpdated"] as string,
     origin: record["origin"] as Manga["origin"],
   };
